@@ -3,11 +3,11 @@ defaults:
   - model: small
   - override hydra/launcher: submitit_slurm
 
-ngpus: 4
+ngpus: 1
 tokens: 50257
 
 training:
-  batch_size: 64
+  batch_size: 16
   accum: 1
   n_iters: 1300001
   snapshot_freq: 50000
@@ -19,8 +19,8 @@ training:
   ema: 0.9999
 
 data:
-  train: openwebtext
-  valid: wikitext103
+  train: gsm8k
+  valid: gsm8k
   cache_dir: data
 
 graph:

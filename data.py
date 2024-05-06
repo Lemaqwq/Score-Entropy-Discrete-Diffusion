@@ -9,8 +9,11 @@ import urllib.request
 import zipfile
 import requests
 import json
+import datasets
 from datasets import Dataset
+import psutil
 
+from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import DataLoader, DistributedSampler
 
 
@@ -115,6 +118,194 @@ def get_lambada_test_dataset():
     dataset = Dataset.from_list(lambada_data)
     return dataset
 
+def preprocess_gsm8k(data_line):
+    question = json.loads(data_line)['src'].strip()
+    target = json.loads(data_line)['trg'].strip()
+
+    rationales = json.loads(data_line)['rationales'].strip()
+    cot_sequences = [[question, rationales + ' ' + target]]
+
+    return cot_sequences
+
+def _collate_batch_helper(examples, pad_token_id, max_length, return_mask=False):
+    result = torch.full([len(examples), max_length], pad_token_id, dtype=torch.int64).tolist()
+    mask_ = torch.full([len(examples), max_length], pad_token_id, dtype=torch.int64).tolist()
+    for i, example in enumerate(examples):
+        curr_len = min(len(example), max_length)
+        result[i][:curr_len] = example[:curr_len]
+        mask_[i][:curr_len] = [1] * curr_len
+    if return_mask:
+        return result, mask_
+    return result
+
+def helper_tokenize(sentence_lst, vocab_dict, seq_len):
+    # Process.memory_info is expressed in bytes, so convert to megabytes
+    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
+    raw_datasets = Dataset.from_dict(sentence_lst)
+    print(raw_datasets)
+    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
+
+    def tokenize_function(examples):
+        input_id_x = vocab_dict(examples['src'], return_attention_mask=False)["input_ids"]
+        input_id_y = vocab_dict(examples['trg'], return_attention_mask=False)["input_ids"]
+        # input_id_x = vocab_dict.encode_token(examples['src'])
+        # input_id_y = vocab_dict.encode_token(examples['trg'])
+        result_dict = {'input_id_x': input_id_x, 'input_id_y': input_id_y}
+
+        return result_dict
+
+
+    tokenized_datasets = raw_datasets.map(
+        tokenize_function,
+        batched=True,
+        num_proc=4,
+        remove_columns=['src', 'trg'],
+        load_from_cache_file=True,
+        desc="Running tokenizer on dataset",
+    )
+    print('### tokenized_datasets', tokenized_datasets)
+    print('### tokenized_datasets...example', tokenized_datasets['input_id_x'][0])
+    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
+
+    def merge_and_mask(group_lst):
+        lst = []
+        mask = []
+        for i in range(len(group_lst['input_id_x'])):
+            end_token = group_lst['input_id_x'][i][-1]
+            src = group_lst['input_id_x'][i][:-1]
+            trg = group_lst['input_id_y'][i][:-1]
+
+            _Simon = True
+            if _Simon:
+                len_z = len(src) + len(trg)
+                stat_path = './stat_train_data' + 'gsm8k' + '.jsonl'
+                stat = open(stat_path, 'a')
+                print(json.dumps({"source": src, "target": trg, "len_z": len_z}), file=stat)
+                stat.close()
+
+            while len(src) + len(trg) > seq_len - 3:
+                if len(src)>len(trg):
+                    src.pop()
+                elif len(src)<len(trg):
+                    trg.pop()
+                else:
+                    src.pop()
+                    trg.pop()
+            src.append(end_token)
+            trg.append(end_token)
+
+            lst.append(src + [vocab_dict.sep_token_id] + trg)
+            mask.append([0]*(len(src)+1))
+        group_lst['input_ids'] = lst
+        group_lst['input_mask'] = mask
+        return group_lst
+    
+    tokenized_datasets = tokenized_datasets.map(
+        merge_and_mask,
+        batched=True,
+        num_proc=1,
+        desc=f"merge and mask",
+    )
+    
+    def pad_function(group_lst):
+        max_length = seq_len
+        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict.pad_token_id, max_length)
+        group_lst['input_mask'] = _collate_batch_helper(group_lst['input_mask'], 1, max_length)
+        return group_lst
+
+    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
+
+    lm_datasets = tokenized_datasets.map(
+        pad_function,
+        batched=True,
+        num_proc=1,
+        desc=f"padding",
+    )
+
+    print(lm_datasets, 'padded dataset')
+    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
+
+    raw_datasets = datasets.DatasetDict()
+    raw_datasets['train'] = lm_datasets
+    print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
+    return raw_datasets
+
+class TextDataset(TorchDataset):
+    def __init__(self, text_datasets):
+        super().__init__()
+        self.text_datasets = text_datasets
+        self.length = len(self.text_datasets['train'])
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        with torch.no_grad():
+
+            out_kwargs = {}
+            out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
+            out_kwargs['input_mask'] = np.array(self.text_datasets['train'][idx]['input_mask'])
+
+            return out_kwargs
+
+
+def finetune_get_dataset(name, mode, block_size=1024, data_dir="datasets/gsm8k"):
+    if name != "gsm8k":
+        assert False, f"only gsm8k is supported for finetuning, now providing {name}."
+
+    print('#'*30, '\nLoading dataset {} from {}...'.format(name, data_dir))
+
+    sentence_lst = {'src':[], 'trg': []}
+
+    if mode == 'train':
+        print('### Loading form the TRAIN set...')
+        path = f'{data_dir}/train.jsonl'
+    elif mode == 'validation':
+        print('### Loading form the VALID set...')
+        path = f'{data_dir}/valid.jsonl'
+    elif mode == 'test':
+        print('### Loading form the TEST set...')
+        path = f'{data_dir}/test.jsonl'
+
+    MAX_DATA_LEN = 16
+    with open(path, 'r') as f_reader:
+        for row in f_reader:
+            if name == 'gsm8k':
+                if mode == 'train' or mode == 'validation':
+                    cot_sentences = preprocess_gsm8k(row)
+                elif mode == 'test':
+                    assert False, 'Test set is not supported for GSM8K dataset.'
+            else:
+                assert False, f"only gsm8k is supported for finetuning, now providing {name}."
+    
+            for cot_sentence in cot_sentences:
+                if len(sentence_lst['src']) >= MAX_DATA_LEN:
+                    break
+                sentence_lst['src'].append(cot_sentence[0])
+                sentence_lst['trg'].append(cot_sentence[1])
+
+    print('### Data samples...\n', sentence_lst['src'][:2], sentence_lst['trg'][:2])
+        
+    # get tokenizer.
+    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    vocab_dict = tokenizer
+    seq_len = block_size
+
+    train_dataset = helper_tokenize(sentence_lst, vocab_dict, seq_len)
+
+    train_dataset = TextDataset(
+        train_dataset
+    )
+
+    return train_dataset
+
+
+    
+
+
+
+
 
 def get_dataset(name, mode, cache_dir=None, block_size=1024, num_proc=8):
     if name == "wikitext103":
@@ -205,9 +396,14 @@ def get_dataloaders(config, distributed=True):
     if config.eval.batch_size % (config.ngpus * config.training.accum) != 0:
         raise ValueError(f"Eval Batch Size for {config.eval.batch_size} is not divisible by {config.ngpus} gpus with accumulation {config.training.accum}.")
 
+    _Simon_finetune = True
+    if _Simon_finetune:
+        train_set = finetune_get_dataset(config.data.train, "train")
+        valid_set = finetune_get_dataset(config.data.valid, "validation")
 
-    train_set = get_dataset(config.data.train, "train", cache_dir=config.data.cache_dir, block_size=config.model.length)
-    valid_set = get_dataset(config.data.valid, "validation" if config.data.valid != "text8" else "test", cache_dir=config.data.cache_dir, block_size=config.model.length)
+    else:
+        train_set = get_dataset(config.data.train, "train", cache_dir=config.data.cache_dir, block_size=config.model.length)
+        valid_set = get_dataset(config.data.valid, "validation" if config.data.valid != "text8" else "test", cache_dir=config.data.cache_dir, block_size=config.model.length)
 
     if distributed:
         train_sampler = DistributedSampler(train_set) 
