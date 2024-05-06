@@ -134,6 +134,8 @@ def _run(rank, world_size, cfg):
     
     # load in tokenizer
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizer.add_special_tokens({'sep_token': '[SEP]'})
 
     # Build data iterators
     train_ds, eval_ds = data.get_dataloaders(cfg)
@@ -173,7 +175,6 @@ def _run(rank, world_size, cfg):
 
 
         if cfg.data.train != "text8":
-            tmp = next(train_iter)
             batch = next(train_iter)['input_ids'].to(device)
         else:
             batch = next(train_iter).to(device)

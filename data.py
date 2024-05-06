@@ -151,7 +151,6 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
         # input_id_x = vocab_dict.encode_token(examples['src'])
         # input_id_y = vocab_dict.encode_token(examples['trg'])
         result_dict = {'input_id_x': input_id_x, 'input_id_y': input_id_y}
-
         return result_dict
 
 
@@ -175,13 +174,13 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             src = group_lst['input_id_x'][i][:-1]
             trg = group_lst['input_id_y'][i][:-1]
 
-            _Simon = True
-            if _Simon:
-                len_z = len(src) + len(trg)
-                stat_path = './stat_train_data' + 'gsm8k' + '.jsonl'
-                stat = open(stat_path, 'a')
-                print(json.dumps({"source": src, "target": trg, "len_z": len_z}), file=stat)
-                stat.close()
+            # _Simon = True
+            # if _Simon:
+            #     len_z = len(src) + len(trg)
+            #     stat_path = './stat_train_data' + 'gsm8k' + '.jsonl'
+            #     stat = open(stat_path, 'a')
+            #     print(json.dumps({"source": src, "target": trg, "len_z": len_z}), file=stat)
+            #     stat.close()
 
             while len(src) + len(trg) > seq_len - 3:
                 if len(src)>len(trg):
@@ -240,13 +239,14 @@ class TextDataset(TorchDataset):
         return self.length
 
     def __getitem__(self, idx):
-        with torch.no_grad():
 
-            out_kwargs = {}
-            out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
-            out_kwargs['input_mask'] = np.array(self.text_datasets['train'][idx]['input_mask'])
+        out_kwargs = {}
 
-            return out_kwargs
+        out_kwargs['input_ids'] = np.array(self.text_datasets['train'][idx]['input_ids'])
+        out_kwargs['input_mask'] = np.array(self.text_datasets['train'][idx]['input_mask'])
+
+        return out_kwargs
+
 
 
 def finetune_get_dataset(name, mode, block_size=1024, data_dir="datasets/gsm8k"):
@@ -267,7 +267,7 @@ def finetune_get_dataset(name, mode, block_size=1024, data_dir="datasets/gsm8k")
         print('### Loading form the TEST set...')
         path = f'{data_dir}/test.jsonl'
 
-    MAX_DATA_LEN = 16
+    MAX_DATA_LEN = 1
     with open(path, 'r') as f_reader:
         for row in f_reader:
             if name == 'gsm8k':
@@ -289,6 +289,7 @@ def finetune_get_dataset(name, mode, block_size=1024, data_dir="datasets/gsm8k")
     # get tokenizer.
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizer.add_special_tokens({'sep_token': '[SEP]'})
     vocab_dict = tokenizer
     seq_len = block_size
 
