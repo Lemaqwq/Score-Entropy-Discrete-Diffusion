@@ -4,7 +4,7 @@ defaults:
   - override hydra/launcher: submitit_slurm
 
 ngpus: 1
-tokens: 50257
+tokens: 50260
 
 training:
   batch_size: 1

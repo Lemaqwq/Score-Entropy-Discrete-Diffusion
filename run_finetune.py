@@ -134,8 +134,13 @@ def _run(rank, world_size, cfg):
     
     # load in tokenizer
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
-    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-    tokenizer.add_special_tokens({'sep_token': '[SEP]'})
+
+    t = tokenizer.get_vocab()
+    with open("vocab.txt", 'w') as f:
+        for k, v in t.items():
+            f.write(f"{k}: {v}\n")
+
+    
 
     # Build data iterators
     train_ds, eval_ds = data.get_dataloaders(cfg)
@@ -157,9 +162,9 @@ def _run(rank, world_size, cfg):
 
     # input_ids = torch.tensor(input_ids, device="cuda")[None].repeat(args.batch_size, 1)
     # # Create mask function for conditional generation
-    # def mask_fn(x):
-    #     x[:, mask] = input_ids
-    #     return x
+    def mask_fn(x, mask, input_id):
+        x = torch.where(mask, input_id, x)
+        return x
 
 
     if cfg.training.snapshot_sampling:
@@ -175,8 +180,12 @@ def _run(rank, world_size, cfg):
 
 
         if cfg.data.train != "text8":
-            batch = next(train_iter)['input_ids'].to(device)
+            curr = next(train_iter)
+            batch = curr['input_ids'].to(device)
+            input_ids = curr['input_ids'].to(device)
+            mask = curr['input_mask'].to(device)
         else:
+            assert False, "Text8 dataset is not supported yet."
             batch = next(train_iter).to(device)
         loss = train_step_fn(state, batch)
 

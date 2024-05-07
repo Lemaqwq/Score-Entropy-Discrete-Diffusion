@@ -258,7 +258,7 @@ class Absorbing(Graph):
         #positive term
         pos_term = score[rel_ind][:, :-1].exp().sum(dim=-1)
 
-        # constant term
+        # constant term --> K(p(y)/p(x))
         const = ratio * (ratio.log() - 1)
 
         entropy = torch.zeros(*x.shape, device=x.device)

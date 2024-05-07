@@ -24,6 +24,15 @@ def get_loss_fn(noise, graph, train, sampling_eps=1e-3, lv=False):
         if perturbed_batch is None:
             perturbed_batch = graph.sample_transition(batch, sigma[:, None])
 
+        with open("preturb.txt", 'w') as f:
+            for i in range(len(perturbed_batch)):
+                for j in range(len(perturbed_batch[i])):
+                    f.write(f"Batch:\n")
+                    f.write(f"{batch[i][j]}\n")
+                    f.write(f"Preturbed Batch:\n")
+                    f.write(f"{perturbed_batch[i][j]}\n")
+                f.write("\n")
+
         log_score_fn = mutils.get_score_fn(model, train=train, sampling=False)
         log_score = log_score_fn(perturbed_batch, sigma)
         loss = graph.score_entropy(log_score, sigma[:, None], perturbed_batch, batch)
