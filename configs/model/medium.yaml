@@ -1,8 +1,8 @@
 name: medium
 type: ddit
-hidden_size: 1024
+hidden_size: 128
 cond_dim: 128
-length: 1024
+length: 128
 n_blocks: 24
 n_heads: 16
 scale_by_sigma: True

@@ -1,16 +1,16 @@
 defaults:
   - _self_
-  - model: small
+  - model: medium
   - override hydra/launcher: submitit_slurm
 
-ngpus: 1
-tokens: 50260
+ngpus: 4
+tokens: 50257
 
 training:
-  batch_size: 1
+  batch_size: 256
   accum: 1
-  n_iters: 1300001
-  snapshot_freq: 50000
+  n_iters: 60001
+  snapshot_freq: 20000
   log_freq: 50
   eval_freq: 100
   snapshot_freq_for_preemption: 10000
@@ -39,7 +39,7 @@ sampling:
   noise_removal: True
 
 eval:
-  batch_size: 512
+  batch_size: 256
   perplexity: True
   perplexity_batch_size: 32
 
