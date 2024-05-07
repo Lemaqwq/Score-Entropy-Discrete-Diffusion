@@ -225,10 +225,12 @@ class Absorbing(Graph):
         )[..., None]
         return edge
 
-    def sample_transition(self, i, sigma):
+    def sample_transition(self, i, mask, sigma):
+        mask = mask == 0
         move_chance = 1 - (-sigma).exp()
         move_indices = torch.rand(*i.shape, device=i.device) < move_chance
         i_pert = torch.where(move_indices, self.dim - 1, i)
+        i_pert = torch.where(mask, i, i_pert)
         return i_pert
     
     def staggered_score(self, score, dsigma):

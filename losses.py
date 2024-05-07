@@ -8,34 +8,35 @@ from model import utils as mutils
 
 def get_loss_fn(noise, graph, train, sampling_eps=1e-3, lv=False):
 
-    def loss_fn(model, batch, cond=None, t=None, perturbed_batch=None):
+    def loss_fn(model, batch, cond=None, t=None, perturbed_input_ids=None):
         """
         Batch shape: [B, L] int. D given from graph
         """
+        input_ids = batch['input_ids'].to(model.device)
+        mask = batch['input_mask'].to(model.device)
 
         if t is None:
             if lv:
                 raise NotImplementedError("Yeah I gotta do this later")
             else:
-                t = (1 - sampling_eps) * torch.rand(batch.shape[0], device=batch.device) + sampling_eps
+                t = (1 - sampling_eps) * torch.rand(input_ids.shape[0], device=input_ids.device) + sampling_eps
             
         sigma, dsigma = noise(t)
         
-        if perturbed_batch is None:
-            perturbed_batch = graph.sample_transition(batch, sigma[:, None])
+        if perturbed_input_ids is None:
+            perturbed_input_ids = graph.sample_transition(input_ids, mask, sigma[:, None])
 
-        with open("preturb.txt", 'w') as f:
-            for i in range(len(perturbed_batch)):
-                for j in range(len(perturbed_batch[i])):
-                    f.write(f"Batch:\n")
-                    f.write(f"{batch[i][j]}\n")
-                    f.write(f"Preturbed Batch:\n")
-                    f.write(f"{perturbed_batch[i][j]}\n")
-                f.write("\n")
+        # with open("preturb.txt", 'w') as f:
+        #     for i in range(len(perturbed_batch)):
+        #         f.write(f"Batch:\n")
+        #         f.write(f"{str(batch[i])}\n")
+        #         f.write(f"Preturbed Batch:\n")
+        #         f.write(f"{str(perturbed_batch[i])}\n")
+        #         f.write("\n")
 
         log_score_fn = mutils.get_score_fn(model, train=train, sampling=False)
-        log_score = log_score_fn(perturbed_batch, sigma)
-        loss = graph.score_entropy(log_score, sigma[:, None], perturbed_batch, batch)
+        log_score = log_score_fn(perturbed_input_ids, sigma)
+        loss = graph.score_entropy(log_score, sigma[:, None], perturbed_input_ids, input_ids)
 
         loss = (dsigma[:, None] * loss).sum(dim=-1)
 

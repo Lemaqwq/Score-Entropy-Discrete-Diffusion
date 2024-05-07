@@ -162,9 +162,9 @@ def _run(rank, world_size, cfg):
 
     # input_ids = torch.tensor(input_ids, device="cuda")[None].repeat(args.batch_size, 1)
     # # Create mask function for conditional generation
-    def mask_fn(x, mask, input_id):
-        x = torch.where(mask, input_id, x)
-        return x
+    # def mask_fn(x, mask, input_id):
+    #     x = torch.where(mask, input_id, x)
+    #     return x
 
 
     if cfg.training.snapshot_sampling:
@@ -180,10 +180,7 @@ def _run(rank, world_size, cfg):
 
 
         if cfg.data.train != "text8":
-            curr = next(train_iter)
-            batch = curr['input_ids'].to(device)
-            input_ids = curr['input_ids'].to(device)
-            mask = curr['input_mask'].to(device)
+            batch = next(train_iter)
         else:
             assert False, "Text8 dataset is not supported yet."
             batch = next(train_iter).to(device)
@@ -202,8 +199,9 @@ def _run(rank, world_size, cfg):
 
             if step % cfg.training.eval_freq == 0:
                 if cfg.data.valid != "text8":
-                    eval_batch = next(eval_iter)['input_ids'].to(device)
+                    eval_batch = next(eval_iter)
                 else:
+                    assert False, "Text8 dataset is not supported yet."
                     eval_batch = next(train_iter).to(device)
                 eval_loss = eval_step_fn(state, eval_batch)
 
