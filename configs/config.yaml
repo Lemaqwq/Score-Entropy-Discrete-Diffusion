@@ -3,7 +3,7 @@ defaults:
   - model: medium
   - override hydra/launcher: submitit_slurm
 
-ngpus: 4
+ngpus: 1
 tokens: 50257
 
 training:

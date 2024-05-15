@@ -176,6 +176,11 @@ def _run(rank, world_size, cfg):
     num_train_steps = cfg.training.n_iters
     mprint(f"Starting training loop at step {initial_step}.")
 
+    # next_data = next(train_iter)
+    # print(f"Next data: {next_data['input_ids']}")
+    # print(f"Decoded data: {tokenizer.batch_decode(next_data['input_ids'])}")
+    # quit()
+
 
     while state['step'] < num_train_steps + 1:
         step = state['step']

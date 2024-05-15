@@ -165,15 +165,18 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     )
     print('### tokenized_datasets', tokenized_datasets)
     print('### tokenized_datasets...example', tokenized_datasets['input_id_x'][0])
+    print('### decoded_tokenized_datasets...x_example', vocab_dict.decode(tokenized_datasets['input_id_x'][0]))
+    print('### decoded_tokenized_datasets...y_example', vocab_dict.decode(tokenized_datasets['input_id_y'][0]))
+
     print(f"RAM used: {psutil.Process().memory_info().rss / (1024 * 1024):.2f} MB")
 
     def merge_and_mask(group_lst):
         lst = []
         mask = []
         for i in range(len(group_lst['input_id_x'])):
-            end_token = group_lst['input_id_x'][i][-1]
-            src = group_lst['input_id_x'][i][:-1]
-            trg = group_lst['input_id_y'][i][:-1]
+            end_token = vocab_dict.eos_token_id
+            src = group_lst['input_id_x'][i]
+            trg = group_lst['input_id_y'][i]
 
             # _Simon = True
             # if _Simon:
@@ -183,7 +186,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             #     print(json.dumps({"source": src, "target": trg, "len_z": len_z}), file=stat)
             #     stat.close()
 
-            while len(src) + len(trg) > seq_len - 3:
+            while len(src) + len(trg) > seq_len - 2:
                 if len(src)>len(trg):
                     src.pop()
                 elif len(src)<len(trg):
@@ -195,10 +198,11 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             trg.append(end_token)
 
             # lst.append(src + [vocab_dict.sep_token_id] + trg)
-            lst.append(src + vocab_dict("Sep")["input_ids"] + trg)
+            lst.append(src + vocab_dict(" Sep ")["input_ids"] + trg)
             mask.append([0]*(len(src)+1))
         group_lst['input_ids'] = lst
         group_lst['input_mask'] = mask
+        print('### decoded_input_ids example', vocab_dict.decode(group_lst['input_ids'][0]))
         return group_lst
     
     tokenized_datasets = tokenized_datasets.map(
@@ -210,7 +214,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     
     def pad_function(group_lst):
         max_length = seq_len
-        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict("[Pad]")["input_ids"][0], max_length)
+        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict(" Pad ")["input_ids"][0], max_length)
         group_lst['input_mask'] = _collate_batch_helper(group_lst['input_mask'], 1, max_length)
         return group_lst
 
@@ -269,7 +273,7 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
         print('### Loading form the TEST set...')
         path = f'{data_dir}/test.jsonl'
 
-    MAX_DATA_LEN = 10000000000
+    MAX_DATA_LEN = 10
     with open(path, 'r') as f_reader:
         for row in f_reader:
             if name == 'gsm8k':

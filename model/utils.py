@@ -4,15 +4,7 @@ import torch.nn.functional as F
 from tokenizers.implementations import ByteLevelBPETokenizer
 from tokenizers.pre_tokenizers import Digits
 from typing import Dict
-
-EOS_TOKEN = "<|endoftext_R9VQqF0Ag7|>"
-PAD_TOKEN = "ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ"
-SEP_TOKEN = '----------------------------------------------------------------'
-PRINT_PAD_TOKEN = '[PAD]'
-PRINT_SEP_TOKEN = '[SEP]'
-EOS_TOKEN_ID = 0
-SEP_TOKEN_ID = 32021
-PAD_TOKEN_ID = 25670
+from transformers import GPT2TokenizerFast
 
 
 def get_model_fn(model, train=False):
@@ -101,7 +93,10 @@ class DigitWrapper(ByteLevelBPETokenizer):
         return self.tokenizer.decode(*args, **kwargs)
 
 def get_tokenizer(digit=False):
-    tokenizer_path = os.path.join('misc/owt2_tokenizer.json')
-    from tokenizers import Tokenizer
-    tokenizer = Tokenizer.from_file(tokenizer_path)
-    return DigitWrapper(tokenizer) if digit else tokenizer
+    # tokenizer_path = os.path.join('misc/owt2_tokenizer.json')
+    # from tokenizers import Tokenizer
+    # tokenizer = Tokenizer.from_file(tokenizer_path)
+
+    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    # return DigitWrapper(tokenizer) if digit else tokenizer
+    return tokenizer
