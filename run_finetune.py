@@ -16,6 +16,7 @@ import sampling
 import graph_lib
 import noise_lib
 import utils
+from model.utils import get_tokenizer
 from model import SEDD
 from model.ema import ExponentialMovingAverage
 from transformers import GPT2TokenizerFast, GPT2LMHeadModel
@@ -133,12 +134,13 @@ def _run(rank, world_size, cfg):
 
     
     # load in tokenizer
-    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    tokenizer = get_tokenizer(digit=True)
+    # tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
 
-    t = tokenizer.get_vocab()
-    with open("vocab.txt", 'w') as f:
-        for k, v in t.items():
-            f.write(f"{k}: {v}\n")
+    # t = tokenizer.get_vocab()
+    # with open("vocab.txt", 'w') as f:
+    #     for k, v in t.items():
+    #         f.write(f"{k}: {v}\n")
 
     
 

@@ -12,6 +12,7 @@ import json
 import datasets
 from datasets import Dataset
 import psutil
+from model.utils import get_tokenizer
 
 from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import DataLoader, DistributedSampler
@@ -123,7 +124,7 @@ def preprocess_gsm8k(data_line):
     target = json.loads(data_line)['trg'].strip()
 
     rationales = json.loads(data_line)['rationales'].strip()
-    cot_sequences = [[question, rationales + ' ' + target]]
+    cot_sequences = [[question, rationales + ' #### ' + target]]
 
     return cot_sequences
 
@@ -209,7 +210,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     
     def pad_function(group_lst):
         max_length = seq_len
-        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict("Pad")["input_ids"][0], max_length)
+        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict("[Pad]")["input_ids"][0], max_length)
         group_lst['input_mask'] = _collate_batch_helper(group_lst['input_mask'], 1, max_length)
         return group_lst
 
@@ -289,7 +290,8 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
     print('### Data samples...\n', sentence_lst['src'][:2], sentence_lst['trg'][:2])
         
     # get tokenizer.
-    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    # tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    tokenizer = get_tokenizer(digit=True)
     vocab_dict = tokenizer
     seq_len = block_size
 
@@ -343,7 +345,8 @@ def get_dataset(name, mode, cache_dir=None, block_size=1024, num_proc=8):
             return text
         return detok
 
-    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    # tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    tokenizer = get_tokenizer(digit=True)
     EOS = tokenizer.encode(tokenizer.eos_token)[0]
 
     def preprocess_and_tokenize(example):
