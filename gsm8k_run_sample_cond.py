@@ -15,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate some samples")
     parser.add_argument("--model_path", default="louaaron/sedd-medium", type=str)
     parser.add_argument("--dataset", default="wikitext103", type=str)
-    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--steps", type=int, default=1024)
     parser.add_argument("--prefix", type=str, default="Hi, my name is")
     parser.add_argument("--suffix", type=str, default="")
@@ -55,11 +55,12 @@ def main():
     for batch in test_iter:
         input_ids = batch["input_ids"].to(device)
         input_mask = batch["input_mask"].to(device)
+        curr_batch_sz = len(input_ids)
 
 
 
         sampling_fn = sampling.get_dot_pc_sampler(
-            graph, noise, (args.batch_size, 128), 'analytic', args.steps, device=device, proj_fun=proj_fun
+            graph, noise, (curr_batch_sz, 128), 'analytic', args.steps, device=device, proj_fun=proj_fun
         )
 
         samples = proj_fun(sampling_fn(model))
@@ -67,10 +68,13 @@ def main():
 
         text_samples = tokenizer.batch_decode(samples)
 
-        fout = open(output_dir + f"step_{args.steps}.jsonl", 'a')
+
+        fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
+
+        for i in range(curr_batch_sz):
+            print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(input_ids[i])}), file=fout)
         
-        print(json.dumps({"recover": text_samples, "source": tokenizer.batch_decode(input_ids)}), file=fout)
-        fout.close()
+    print("### Done!")
 
 
 if __name__=="__main__":

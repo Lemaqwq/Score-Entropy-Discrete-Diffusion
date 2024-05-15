@@ -28,10 +28,10 @@
             "program": "${workspaceFolder}/gsm8k_run_sample_cond.py",
             "console": "integratedTerminal",
             "args": [
-                "--model_path", "exp_local/gsm8k/2024.05.06/214812",
+                "--model_path", "exp_local/gsm8k/2024.05.15/025053",
                 "--dataset", "gsm8k",
-                "--steps", "128",
-                "--batch_size", "1",
+                "--steps", "10",
+                "--batch_size", "128",
             ]
         }
     ]
