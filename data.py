@@ -273,7 +273,7 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
         print('### Loading form the TEST set...')
         path = f'{data_dir}/test.jsonl'
 
-    MAX_DATA_LEN = 10
+    MAX_DATA_LEN = 100000000000
     with open(path, 'r') as f_reader:
         for row in f_reader:
             if name == 'gsm8k':
