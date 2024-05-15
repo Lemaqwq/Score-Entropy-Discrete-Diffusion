@@ -272,10 +272,11 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
     with open(path, 'r') as f_reader:
         for row in f_reader:
             if name == 'gsm8k':
-                if mode == 'train' or mode == 'validation':
+                if mode == 'train' or mode == 'validation' or mode == 'test':
                     cot_sentences = preprocess_gsm8k(row)
-                elif mode == 'test':
-                    assert False, 'Test set is not supported for GSM8K dataset.'
+                else:
+                    assert False, f"Invaild data mode {mode} for gsm8k detected."
+                    
             else:
                 assert False, f"only gsm8k is supported for finetuning, now providing {name}."
     

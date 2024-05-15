@@ -1,7 +1,7 @@
 import torch
 import argparse
 
-from load_model import load_model
+from load_model import load_model_local
 from transformers import GPT2TokenizerFast
 import sampling
 
@@ -13,18 +13,18 @@ def main():
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--steps", type=int, default=1024)
     parser.add_argument("--prefix", type=str, default="Hi, my name is")
-    parser.add_argument("--suffix", type=str, default=" and that's why I'm late.")
+    parser.add_argument("--suffix", type=str, default="")
     args = parser.parse_args()
 
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
 
-    args.prefix = "Some popular hiking places include"
-    args.suffix = "and that is why I always shampoo twice a day and shower three times a day."
+    args.prefix = "A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?"
+    # args.suffix = "and that is why I always shampoo twice a day and shower three times a day."
 
     prefix_ids = tokenizer(args.prefix).input_ids
     suffix_ids = tokenizer(args.suffix).input_ids
     input_ids = prefix_ids + suffix_ids
-    input_locs = list(range(len(prefix_ids))) + list(range(1024-len(suffix_ids), 1024))
+    input_locs = list(range(len(prefix_ids))) + list(range(128-len(suffix_ids), 128))
 
     # more generaly commands can be defined with something like below:
     # input_ids = [0, 1, 512, 8080, 50256, 20000]
@@ -38,11 +38,11 @@ def main():
         return x
     
     device = torch.device('cuda')
-    model, graph, noise = load_model(args.model_path, device)
+    model, graph, noise = load_model_local(args.model_path, device)
     
 
     sampling_fn = sampling.get_pc_sampler(
-        graph, noise, (args.batch_size, 1024), 'analytic', args.steps, device=device, proj_fun=proj_fun
+        graph, noise, (args.batch_size, 128), 'analytic', args.steps, device=device, proj_fun=proj_fun
     )
 
     samples = proj_fun(sampling_fn(model))

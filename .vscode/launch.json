@@ -4,6 +4,8 @@
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+    
+
 
         {
             "name": "train",
@@ -18,6 +20,19 @@
             "request": "launch",
             "program": "${workspaceFolder}/finetune.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "inference_gsm8k",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/gsm8k_run_sample_cond.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--model_path", "exp_local/gsm8k/2024.05.06/214812",
+                "--dataset", "gsm8k",
+                "--steps", "128",
+                "--batch_size", "1",
+            ]
         }
     ]
 }
