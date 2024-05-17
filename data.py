@@ -119,13 +119,34 @@ def get_lambada_test_dataset():
     dataset = Dataset.from_list(lambada_data)
     return dataset
 
-def preprocess_gsm8k(data_line):
+# def preprocess_gsm8k(data_line):
+#     question = json.loads(data_line)['src'].strip()
+#     target = json.loads(data_line)['trg'].strip()
+
+#     rationales = json.loads(data_line)['rationales'].strip()
+#     cot_sequences = [[question, rationales + ' #### ' + target]]
+
+#     return cot_sequences
+
+def preprocess_gsm8k(data_line, multipass=False):
     question = json.loads(data_line)['src'].strip()
     target = json.loads(data_line)['trg'].strip()
 
-    rationales = json.loads(data_line)['rationales'].strip()
-    cot_sequences = [[question, rationales + ' #### ' + target]]
 
+    if multipass:
+        rationales = json.loads(data_line)['rationales'].strip().split(" ")
+        target = '#### ' + target
+
+        cot_sequences = []
+        rationales = [''] + rationales + [target]
+
+        for i in range(len(rationales)-1):
+            cot_sequences.append(tuple([question + ' ' + ' '.join(rationales[0:i+1]), rationales[i+1]]))
+    
+    else:
+        rationales = json.loads(data_line)['rationales'].strip()
+        cot_sequences = [[question, rationales + ' #### ' + target]]
+    
     return cot_sequences
 
 def _collate_batch_helper(examples, pad_token_id, max_length, return_mask=False):
@@ -278,7 +299,8 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
         for row in f_reader:
             if name == 'gsm8k':
                 if mode == 'train' or mode == 'validation' or mode == 'test':
-                    cot_sentences = preprocess_gsm8k(row)
+                    multipass = True
+                    cot_sentences = preprocess_gsm8k(row, multipass=multipass)
                 else:
                     assert False, f"Invaild data mode {mode} for gsm8k detected."
                     
@@ -291,7 +313,7 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
                 sentence_lst['src'].append(cot_sentence[0])
                 sentence_lst['trg'].append(cot_sentence[1])
 
-    print('### Data samples...\n', sentence_lst['src'][:2], sentence_lst['trg'][:2])
+    print('### Data samples...\n', sentence_lst['src'][:10], sentence_lst['trg'][:10])
         
     # get tokenizer.
     # tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
