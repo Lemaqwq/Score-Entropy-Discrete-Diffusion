@@ -60,10 +60,9 @@ def calculate_correct_rate(jsonl_file):
     return correct_rate
 
 # Usage example
-jsonl_file_path = 'step_128.jsonl'
-correct_rate = calculate_correct_rate(jsonl_file_path)
-print(f"Correct rate: {correct_rate}%")
-
+# jsonl_file_path = 'step_64.jsonl'
+# correct_rate = calculate_correct_rate(jsonl_file_path)
+# print(f"Correct rate: {correct_rate}%")
 
 steps = [1, 2, 4, 8, 16, 32, 64, 128]
 acc = []
