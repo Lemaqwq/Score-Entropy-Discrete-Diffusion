@@ -128,9 +128,13 @@ def get_lambada_test_dataset():
 
 #     return cot_sequences
 
-def preprocess_gsm8k(data_line, multipass=False):
+def preprocess_gsm8k(data_line, multipass=False, hidden_thought=False):
     question = json.loads(data_line)['src'].strip()
     target = json.loads(data_line)['trg'].strip()
+
+    if hidden_thought and multipass:
+        return [[question, ' #### ' + target]]
+
 
 
     if multipass:
@@ -300,7 +304,8 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
             if name == 'gsm8k':
                 if mode == 'train' or mode == 'validation' or mode == 'test':
                     multipass = True
-                    cot_sentences = preprocess_gsm8k(row, multipass=multipass)
+                    hidden_thought = True
+                    cot_sentences = preprocess_gsm8k(row, multipass=multipass, hidden_thought=hidden_thought)
                 else:
                     assert False, f"Invaild data mode {mode} for gsm8k detected."
                     

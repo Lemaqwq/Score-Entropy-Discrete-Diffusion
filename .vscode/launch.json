@@ -25,13 +25,13 @@
             "name": "inference_gsm8k",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/gsm8k_run_sample_cond.py",
+            "program": "${workspaceFolder}/gsm8k_run_sample_cond_mp.py",
             "console": "integratedTerminal",
             "args": [
-                "--model_path", "exp_local/gsm8k/2024.05.15/025053",
+                "--model_path", "exp_local/gsm8k/2024.05.17/071425_medium_step_60000_mp",
                 "--dataset", "gsm8k",
                 "--steps", "10",
-                "--batch_size", "128",
+                "--batch_size", "1",
             ]
         }
     ]
