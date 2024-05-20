@@ -1,3 +1,4 @@
+from datetime import time
 import os
 import torch
 import argparse
@@ -110,8 +111,11 @@ def main():
     output_dir = f"generated_output/{args.dataset}"
     os.makedirs(output_dir, exist_ok=True)
 
+    run_time = []
+
         
     for batch in test_iter:
+        start_time = time.time()
         input_ids = batch["input_ids"].to(device)
         current_seq = tokenizer.batch_decode(input_ids)
         input_mask = batch["input_mask"].to(device)
@@ -121,6 +125,7 @@ def main():
             )
 
         end_thought = False
+        len_of_thought = 0
         while not end_thought:
 
             samples = proj_fun(sampling_fn(model))
@@ -128,21 +133,26 @@ def main():
 
             first_sample = samples[0]
             first_text_sample = text_samples[0]
-            if "####" in first_text_sample:
+            if "####" in first_text_sample or len_of_thought > 10:
                 end_thought = True
             else:
                 input_ids, input_mask = update_input(first_sample, input_mask, input_ids[0])
                 decoded_input_ids_tmp = tokenizer.batch_decode(input_ids)
-                print(decoded_input_ids_tmp)
+                # print(decoded_input_ids_tmp)
+                len_of_thought += 1
 
 
 
+        run_time.append(time.time() - start_time)
 
 
         fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
+        print(json.dumps({"recover": first_text_sample, "source": tokenizer.decode(input_ids[0])}), file=fout)
 
-        for i in range(curr_batch_sz):
-            print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(input_ids[i])}), file=fout)
+        # for i in range(curr_batch_sz):
+        #     print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(input_ids[i])}), file=fout)
+
+    print(f"Thoughput (it/sec): {len(run_time) / sum(run_time)}")
         
     print("### Done!")
 
