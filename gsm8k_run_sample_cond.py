@@ -1,3 +1,4 @@
+import time
 import os
 import torch
 import argparse
@@ -48,11 +49,12 @@ def main():
     device = torch.device('cuda')
     model, graph, noise = load_model_local(args.model_path, device)
 
-    output_dir = f"generated_output/{args.dataset}"
+    output_dir = f"generated_output/{args.dataset}/dot_medium"
     os.makedirs(output_dir, exist_ok=True)
 
-        
+    run_time = []
     for batch in test_iter:
+        start_time = time.time()
         input_ids = batch["input_ids"].to(device)
         input_mask = batch["input_mask"].to(device)
         curr_batch_sz = len(input_ids)
@@ -68,11 +70,17 @@ def main():
 
         text_samples = tokenizer.batch_decode(samples)
 
+        run_time.append(time.time() - start_time)
+        if len(run_time) % 10 == 0:
+            print(f"Throughput (it/sec): {len(run_time) / sum(run_time)}")
+
 
         fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
 
         for i in range(curr_batch_sz):
             print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(input_ids[i])}), file=fout)
+
+    print(f"Thoughput (it/sec): {len(run_time) / sum(run_time)}")
         
     print("### Done!")
 

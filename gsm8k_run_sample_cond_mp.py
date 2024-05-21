@@ -1,4 +1,4 @@
-from datetime import time
+import time
 import os
 import torch
 import argparse
@@ -144,6 +144,8 @@ def main():
 
 
         run_time.append(time.time() - start_time)
+        if len(run_time) % 10 == 0:
+            print(f"Thoughput (it/sec): {len(run_time) / sum(run_time)}")
 
 
         fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
