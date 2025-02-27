@@ -83,7 +83,7 @@ def main():
 
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
 
-    test_set = finetune_get_dataset(args.dataset, "test")
+    test_set = finetune_get_dataset(args.dataset, "test", multipass=False, hidden_thought=True)
 
     test_loader = DataLoader(
         test_set,

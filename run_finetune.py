@@ -134,8 +134,7 @@ def _run(rank, world_size, cfg):
 
     
     # load in tokenizer
-    tokenizer = get_tokenizer(digit=True)
-    # tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    tokenizer = get_tokenizer()
 
     # t = tokenizer.get_vocab()
     # with open("vocab.txt", 'w') as f:
@@ -143,7 +142,6 @@ def _run(rank, world_size, cfg):
     #         f.write(f"{k}: {v}\n")
 
     
-
     # Build data iterators
     train_ds, eval_ds = data.get_dataloaders(cfg)
 
@@ -223,43 +221,45 @@ def _run(rank, world_size, cfg):
                 if rank == 0:
                     utils.save_checkpoint(os.path.join(
                         checkpoint_dir, f'checkpoint_{save_step}.pth'), state)
+                
+                print(f"Finished!!! Saved checkpoint at step {step}.")
 
                 # Generate and save samples
-                if cfg.training.snapshot_sampling:
-                    mprint(f"Generating text at step: {step}")
+                # if cfg.training.snapshot_sampling:
+                #     mprint(f"Generating text at step: {step}")
 
-                    this_sample_dir = os.path.join(sample_dir, "iter_{}".format(step))
-                    utils.makedirs(this_sample_dir)
+                #     this_sample_dir = os.path.join(sample_dir, "iter_{}".format(step))
+                #     utils.makedirs(this_sample_dir)
 
-                    ema.store(score_model.parameters())
-                    ema.copy_to(score_model.parameters())
-                    sample = sampling_fn(score_model)
-                    ema.restore(score_model.parameters())
+                #     ema.store(score_model.parameters())
+                #     ema.copy_to(score_model.parameters())
+                #     sample = sampling_fn(score_model)
+                #     ema.restore(score_model.parameters())
 
-                    sentences = tokenizer.batch_decode(sample)
+                #     sentences = tokenizer.batch_decode(sample)
                     
-                    file_name = os.path.join(this_sample_dir, f"sample_{rank}.txt")
-                    with open(file_name, 'w') as file:
-                        for sentence in sentences:
-                            file.write(sentence + "\n")
-                            file.write("============================================================================================\n")
+                #     file_name = os.path.join(this_sample_dir, f"sample_{rank}.txt")
+                #     with open(file_name, 'w') as file:
+                #         for sentence in sentences:
+                #             file.write(sentence + "\n")
+                #             file.write("============================================================================================\n")
 
-                    if cfg.eval.perplexity:
-                        with torch.no_grad():
-                            eval_model = GPT2LMHeadModel.from_pretrained("gpt2-large").to(device).eval()
-                            batches = sample.shape[0] // cfg.eval.perplexity_batch_size
-                            total_perplexity = 0
-                            for i in range(batches):
-                                s = sample[i * cfg.eval.perplexity_batch_size:(i + 1) * cfg.eval.perplexity_batch_size]
-                                loss, logits = eval_model(s, labels=s)[:2]
-                                logits = logits.transpose(-1, -2)
-                                perplexity = F.cross_entropy(logits[..., :-1], s[..., 1:], reduction="none").mean(dim=-1).exp().mean()
-                                total_perplexity += perplexity
-                            total_perplexity /= batches
-                            dist.all_reduce(total_perplexity)
-                            total_perplexity /= world_size
-                            mprint(f"Generative Perplexity at step: {step}. Perplexity: {total_perplexity:.3f}.")
+                #     if cfg.eval.perplexity:
+                #         with torch.no_grad():
+                #             eval_model = GPT2LMHeadModel.from_pretrained("gpt2-large").to(device).eval()
+                #             batches = sample.shape[0] // cfg.eval.perplexity_batch_size
+                #             total_perplexity = 0
+                #             for i in range(batches):
+                #                 s = sample[i * cfg.eval.perplexity_batch_size:(i + 1) * cfg.eval.perplexity_batch_size]
+                #                 loss, logits = eval_model(s, labels=s)[:2]
+                #                 logits = logits.transpose(-1, -2)
+                #                 perplexity = F.cross_entropy(logits[..., :-1], s[..., 1:], reduction="none").mean(dim=-1).exp().mean()
+                #                 total_perplexity += perplexity
+                #             total_perplexity /= batches
+                #             dist.all_reduce(total_perplexity)
+                #             total_perplexity /= world_size
+                #             mprint(f"Generative Perplexity at step: {step}. Perplexity: {total_perplexity:.3f}.")
 
-                            del eval_model, logits, loss
+                #             del eval_model, logits, loss
 
-                    dist.barrier()
+                #     dist.barrier()

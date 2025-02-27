@@ -21,10 +21,12 @@ def main():
     args.prefix = "A robe takes 2 bolts of blue fiber and half that much white fiber.  How many bolts in total does it take?"
     # args.suffix = "and that is why I always shampoo twice a day and shower three times a day."
 
+    max_seq = 1024
+
     prefix_ids = tokenizer(args.prefix).input_ids
     suffix_ids = tokenizer(args.suffix).input_ids
     input_ids = prefix_ids + suffix_ids
-    input_locs = list(range(len(prefix_ids))) + list(range(128-len(suffix_ids), 128))
+    input_locs = list(range(len(prefix_ids))) + list(range(max_seq-len(suffix_ids), max_seq))
 
     # more generaly commands can be defined with something like below:
     # input_ids = [0, 1, 512, 8080, 50256, 20000]
@@ -42,7 +44,7 @@ def main():
     
 
     sampling_fn = sampling.get_pc_sampler(
-        graph, noise, (args.batch_size, 128), 'analytic', args.steps, device=device, proj_fun=proj_fun
+        graph, noise, (args.batch_size, max_seq), 'analytic', args.steps, device=device, proj_fun=proj_fun
     )
 
     samples = proj_fun(sampling_fn(model))

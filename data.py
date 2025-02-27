@@ -203,13 +203,12 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             src = group_lst['input_id_x'][i]
             trg = group_lst['input_id_y'][i]
 
-            # _Simon = True
-            # if _Simon:
-            #     len_z = len(src) + len(trg)
-            #     stat_path = './stat_train_data' + 'gsm8k' + '.jsonl'
-            #     stat = open(stat_path, 'a')
-            #     print(json.dumps({"source": src, "target": trg, "len_z": len_z}), file=stat)
-            #     stat.close()
+
+            # len_z = len(src) + len(trg)
+            # stat_path = './stat_train_data' + 'gsm8k' + '.jsonl'
+            # stat = open(stat_path, 'a')
+            # print(json.dumps({"source": src, "target": trg, "len_z": len_z}), file=stat)
+            # stat.close()
 
             while len(src) + len(trg) > seq_len - 2:
                 if len(src)>len(trg):
@@ -222,14 +221,15 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             src.append(end_token)
             trg.append(end_token)
 
-            # lst.append(src + [vocab_dict.sep_token_id] + trg)
-            lst.append(src + vocab_dict(" Sep ")["input_ids"] + trg)
+            # Inject [SEP] between source question and the target answer
+            lst.append(src + vocab_dict("[SEP]")["input_ids"] + trg)
             mask.append([0]*(len(src)+1))
         group_lst['input_ids'] = lst
         group_lst['input_mask'] = mask
-        print('### decoded_input_ids example', vocab_dict.decode(group_lst['input_ids'][0]))
+        # print('### decoded_input_ids example', vocab_dict.decode(group_lst['input_ids'][0]))
         return group_lst
     
+    # Merge the x and y into z and mask the x
     tokenized_datasets = tokenized_datasets.map(
         merge_and_mask,
         batched=True,
@@ -239,7 +239,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     
     def pad_function(group_lst):
         max_length = seq_len
-        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict(" Pad ")["input_ids"][0], max_length)
+        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], vocab_dict("[PAD]")["input_ids"][0], max_length)
         group_lst['input_mask'] = _collate_batch_helper(group_lst['input_mask'], 1, max_length)
         return group_lst
 
@@ -280,7 +280,7 @@ class TextDataset(TorchDataset):
 
 
 
-def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
+def finetune_get_dataset(name, mode, multipass, hidden_thought, block_size=128, data_dir="datasets/gsm8k"):
     if name != "gsm8k":
         assert False, f"only gsm8k is supported for finetuning, now providing {name}."
 
@@ -298,17 +298,16 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
         print('### Loading form the TEST set...')
         path = f'{data_dir}/test.jsonl'
 
-    MAX_DATA_LEN = 100000000000
+    # Maximum number of data samples to load. Additional samples will be ignored.
+    MAX_DATA_LEN = 10000000
     with open(path, 'r') as f_reader:
         for row in f_reader:
             if name == 'gsm8k':
-                if mode == 'train' or mode == 'validation' or mode == 'test':
-                    multipass = True
-                    hidden_thought = True
+                if mode in {'train', 'validation', 'test'}:
                     cot_sentences = preprocess_gsm8k(row, multipass=multipass, hidden_thought=hidden_thought)
                 else:
                     assert False, f"Invaild data mode {mode} for gsm8k detected."
-                    
+    
             else:
                 assert False, f"only gsm8k is supported for finetuning, now providing {name}."
     
@@ -319,18 +318,15 @@ def finetune_get_dataset(name, mode, block_size=128, data_dir="datasets/gsm8k"):
                 sentence_lst['trg'].append(cot_sentence[1])
 
     print('### Data samples...\n', sentence_lst['src'][:10], sentence_lst['trg'][:10])
-        
-    # get tokenizer.
-    # tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
-    tokenizer = get_tokenizer(digit=True)
-    vocab_dict = tokenizer
-    seq_len = block_size
 
-    train_dataset = helper_tokenize(sentence_lst, vocab_dict, seq_len)
-
-    train_dataset = TextDataset(
-        train_dataset
-    )
+    _Simon = True
+    if _Simon:
+        with open('./raw_train_data' + 'gsm8k' + '.jsonl', 'w') as f:
+            for i in range(len(sentence_lst['src'])):
+                print(json.dumps({"source": sentence_lst['src'][i], "target": sentence_lst['trg'][i]}), file=f)
+    
+    tokenizer = get_tokenizer()
+    train_dataset = TextDataset(helper_tokenize(sentence_lst, vocab_dict=tokenizer, seq_len=block_size))
 
     return train_dataset
 
@@ -433,8 +429,8 @@ def get_dataloaders(config, distributed=True):
 
     _Simon_finetune = True
     if _Simon_finetune:
-        train_set = finetune_get_dataset(config.data.train, "train")
-        valid_set = finetune_get_dataset(config.data.valid, "validation")
+        train_set = finetune_get_dataset(config.data.train, "train", config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
+        valid_set = finetune_get_dataset(config.data.valid, "validation", config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
 
     else:
         train_set = get_dataset(config.data.train, "train", cache_dir=config.data.cache_dir, block_size=config.model.length)

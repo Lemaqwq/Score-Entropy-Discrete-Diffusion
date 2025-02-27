@@ -93,10 +93,25 @@ class DigitWrapper(ByteLevelBPETokenizer):
         return self.tokenizer.decode(*args, **kwargs)
 
 def get_tokenizer(digit=False):
+    assert (
+        digit == False
+    ), "Digit wrapper is currently not supported."
+    
     # tokenizer_path = os.path.join('misc/owt2_tokenizer.json')
     # from tokenizers import Tokenizer
     # tokenizer = Tokenizer.from_file(tokenizer_path)
 
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+
+    num_added_tokens = tokenizer.add_special_tokens(
+        {
+            "pad_token": "[PAD]",
+        }
+    )
+    assert num_added_tokens in [
+        0,
+        1,
+    ], "GPTTokenizerFast should only add one special token - the pad_token, or no tokens if pad token present."
+    
     # return DigitWrapper(tokenizer) if digit else tokenizer
     return tokenizer

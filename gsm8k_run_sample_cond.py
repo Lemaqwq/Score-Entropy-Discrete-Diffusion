@@ -7,6 +7,7 @@ from load_model import load_model_local
 from transformers import GPT2TokenizerFast
 from torch.utils.data import DataLoader
 from data import finetune_get_dataset
+from model.utils import get_tokenizer
 import sampling
 import data
 import json
@@ -22,9 +23,12 @@ def main():
     parser.add_argument("--suffix", type=str, default="")
     args = parser.parse_args()
 
-    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    block_size = 128
 
-    test_set = finetune_get_dataset(args.dataset, "test")
+    tokenizer = get_tokenizer(digit=True)
+
+
+    test_set = finetune_get_dataset(args.dataset, "test", multipass=False, hidden_thought=True)
 
     test_loader = DataLoader(
         test_set,
@@ -39,6 +43,8 @@ def main():
     # mprint(f"Length of datasets: {len(train_ds)}, {len(eval_ds)}")
 
     test_iter = iter(test_loader)
+
+    
 
     
 
@@ -62,7 +68,7 @@ def main():
 
 
         sampling_fn = sampling.get_dot_pc_sampler(
-            graph, noise, (curr_batch_sz, 128), 'analytic', args.steps, device=device, proj_fun=proj_fun
+            graph, noise, (curr_batch_sz, block_size), 'analytic', args.steps, device=device, proj_fun=proj_fun
         )
 
         samples = proj_fun(sampling_fn(model))
