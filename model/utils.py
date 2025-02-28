@@ -105,13 +105,14 @@ def get_tokenizer(digit=False):
 
     num_added_tokens = tokenizer.add_special_tokens(
         {
-            "pad_token": "[PAD]",
+            "sep_token": "[SEP]",
+            "pad_token": "[PAD]"
         }
     )
     assert num_added_tokens in [
         0,
-        1,
-    ], "GPTTokenizerFast should only add one special token - the pad_token, or no tokens if pad token present."
+        2,
+    ], "GPTTokenizerFast should only add two special token - the pad_token and sep_token, or no tokens if both tokens present."
     
     # return DigitWrapper(tokenizer) if digit else tokenizer
     return tokenizer

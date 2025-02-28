@@ -44,10 +44,6 @@ def main():
 
     test_iter = iter(test_loader)
 
-    
-
-    
-
     def proj_fun(x):
         x = torch.where(input_mask==0, input_ids, x)
         return x
@@ -72,14 +68,11 @@ def main():
         )
 
         samples = proj_fun(sampling_fn(model))
-
-
         text_samples = tokenizer.batch_decode(samples)
 
         run_time.append(time.time() - start_time)
         if len(run_time) % 10 == 0:
             print(f"Throughput (it/sec): {len(run_time) / sum(run_time)}")
-
 
         fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
 
