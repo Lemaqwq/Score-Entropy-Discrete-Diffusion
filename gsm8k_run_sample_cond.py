@@ -8,6 +8,7 @@ from transformers import GPT2TokenizerFast
 from torch.utils.data import DataLoader
 from data import finetune_get_dataset
 from model.utils import get_tokenizer
+from tqdm import tqdm
 import sampling
 import data
 import json
@@ -55,7 +56,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     run_time = []
-    for batch in test_iter:
+    for batch in tqdm(test_iter, desc="Processing batches", unit="batch"):
         start_time = time.time()
         input_ids = batch["input_ids"].to(device)
         input_mask = batch["input_mask"].to(device)
