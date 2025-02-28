@@ -25,7 +25,7 @@ def main():
 
     block_size = 128
 
-    tokenizer = get_tokenizer(digit=True)
+    tokenizer = get_tokenizer()
 
 
     test_set = finetune_get_dataset(args.dataset, "test", multipass=False, hidden_thought=True)
