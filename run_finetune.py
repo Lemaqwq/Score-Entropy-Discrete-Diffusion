@@ -95,9 +95,14 @@ def _run(rank, world_size, cfg):
     score_model, graph, noise = load_model_hf(f"louaaron/sedd-{cfg.model.name}", device)
     score_model_config = score_model.config
 
+    # load in tokenizer
+    score_model, tokenizer = get_tokenizer(model=score_model, device=device)
+
     score_model = DDP(score_model, device_ids=[rank], static_graph=True, find_unused_parameters=True)
     noise = DDP(noise, device_ids=[rank], static_graph=True)
     sampling_eps = 1e-5
+
+
 
     with open("pretrain_model_config.txt", 'w') as f:
         f.write("Original model config: \n")
@@ -133,8 +138,7 @@ def _run(rank, world_size, cfg):
     initial_step = int(state['step'])
 
     
-    # load in tokenizer
-    tokenizer = get_tokenizer()
+
 
     # t = tokenizer.get_vocab()
     # with open("vocab.txt", 'w') as f:
@@ -143,7 +147,7 @@ def _run(rank, world_size, cfg):
 
     
     # Build data iterators
-    train_ds, eval_ds = data.get_dataloaders(cfg)
+    train_ds, eval_ds = data.get_dataloaders(cfg, tokenizer)
 
     # mprint(f"Length of datasets: {len(train_ds)}, {len(eval_ds)}")
 

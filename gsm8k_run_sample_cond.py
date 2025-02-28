@@ -26,10 +26,13 @@ def main():
 
     block_size = 128
 
-    tokenizer = get_tokenizer()
+    device = torch.device('cuda')
+    model, graph, noise = load_model_local(args.model_path, device)
+
+    model, tokenizer = get_tokenizer(model=model, device=device)
 
 
-    test_set = finetune_get_dataset(args.dataset, "test", multipass=False, hidden_thought=True)
+    test_set = finetune_get_dataset(args.dataset, "test", tokenizer=tokenizer, multipass=False, hidden_thought=True)
 
     test_loader = DataLoader(
         test_set,
@@ -49,8 +52,7 @@ def main():
         x = torch.where(input_mask==0, input_ids, x)
         return x
 
-    device = torch.device('cuda')
-    model, graph, noise = load_model_local(args.model_path, device)
+
 
     output_dir = f"generated_output/{args.dataset}/dot_medium"
     os.makedirs(output_dir, exist_ok=True)

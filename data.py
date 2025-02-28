@@ -280,7 +280,7 @@ class TextDataset(TorchDataset):
 
 
 
-def finetune_get_dataset(name, mode, multipass, hidden_thought, block_size=128, data_dir="datasets/gsm8k"):
+def finetune_get_dataset(name, mode, tokenizer, multipass, hidden_thought, block_size=128, data_dir="datasets/gsm8k"):
     if name != "gsm8k":
         assert False, f"only gsm8k is supported for finetuning, now providing {name}."
 
@@ -325,7 +325,6 @@ def finetune_get_dataset(name, mode, multipass, hidden_thought, block_size=128, 
             for i in range(len(sentence_lst['src'])):
                 print(json.dumps({"source": sentence_lst['src'][i], "target": sentence_lst['trg'][i]}), file=f)
     
-    tokenizer = get_tokenizer()
     train_dataset = TextDataset(helper_tokenize(sentence_lst, vocab_dict=tokenizer, seq_len=block_size))
 
     return train_dataset
@@ -421,7 +420,7 @@ def get_dataset(name, mode, cache_dir=None, block_size=1024, num_proc=8):
     return chunked_dataset
 
 
-def get_dataloaders(config, distributed=True):
+def get_dataloaders(config, tokenizer, distributed=True):
     if config.training.batch_size % (config.ngpus * config.training.accum) != 0:
             raise ValueError(f"Train Batch Size {config.training.batch_size} is not divisible by {config.ngpus} gpus with accumulation {config.training.accum}.")
     if config.eval.batch_size % (config.ngpus * config.training.accum) != 0:
@@ -429,8 +428,8 @@ def get_dataloaders(config, distributed=True):
 
     _Simon_finetune = True
     if _Simon_finetune:
-        train_set = finetune_get_dataset(config.data.train, "train", config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
-        valid_set = finetune_get_dataset(config.data.valid, "validation", config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
+        train_set = finetune_get_dataset(config.data.train, "train", tokenizer, config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
+        valid_set = finetune_get_dataset(config.data.valid, "validation", tokenizer, config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
 
     else:
         train_set = get_dataset(config.data.train, "train", cache_dir=config.data.cache_dir, block_size=config.model.length)
