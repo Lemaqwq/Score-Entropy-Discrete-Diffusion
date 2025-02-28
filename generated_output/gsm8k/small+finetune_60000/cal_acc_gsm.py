@@ -3,11 +3,11 @@ import re
 import matplotlib.pyplot as plt
 
 def extract_patterns(string):
-    anws = string.split('#')[-1]
-    anws = anws.split('<|endoftext|>')[0]
-    anws = anws.strip()
-    if anws.isnumeric:
-        return anws
+    ans = string.split('<|endoftext|>')[0]
+    ans = ans.split('####')[-1]
+    ans = ans.strip()
+    if ans.isnumeric:
+        return ans
     else:
         return None
     
@@ -24,30 +24,28 @@ def calculate_correct_rate(jsonl_file):
             recover = data['recover']
             source = data['source']
 
-            if 'Sep' in recover and 'Pad' in recover:
-                recover = recover.split('Pad')[0]
-                recover = recover.split('Sep')[1]
-                recover = recover.strip()
-                
-                ans = extract_patterns(recover)
+            if '<|endoftext|>[SEP]' in recover:
+                recover = recover.split('<|endoftext|>[SEP]')[1]
+                if '<|endoftext|>' in recover:
+                    recover = recover.strip()
+                    ans = extract_patterns(recover)
 
-        
-                if len(ans) != 0:
-                    try: 
-                        reference = source.split('Pad')[0]
-                        reference = reference.split('Sep')[1]
-                        reference = reference.strip()
-                        reference = extract_patterns(reference)
-                        if reference.isnumeric:
-                            if ans == reference:
-                                print(total_lines)
-                                correct_lines += 1
-                                # print(f"reference: {data['source']}\nrecover: {data['recover']}")
-                        else:
+                    if len(ans) != 0:
+                        try: 
+                            reference = source.split('[PAD]')[0]
+                            reference = reference.split('[SEP]')[1]
+                            reference = reference.strip()
+                            reference = extract_patterns(reference)
+                            if reference.isnumeric:
+                                if ans == reference:
+                                    print(total_lines)
+                                    correct_lines += 1
+                                    # print(f"reference: {data['source']}\nrecover: {data['recover']}")
+                            else:
+                                print(f"Bad reference detected: reference: {data['source']}\nrecover: {data['recover']}")
+                        except:
                             print(f"Bad reference detected: reference: {data['source']}\nrecover: {data['recover']}")
-                    except:
-                        print(f"Bad reference detected: reference: {data['source']}\nrecover: {data['recover']}")
-                        continue
+                            continue
                     
 
 
@@ -64,20 +62,20 @@ def calculate_correct_rate(jsonl_file):
 # correct_rate = calculate_correct_rate(jsonl_file_path)
 # print(f"Correct rate: {correct_rate}%")
 
-steps = [1, 2, 4, 8, 16, 32, 64, 128]
+steps = [4, 8, 16, 32, 64]
 acc = []
 
 for step in steps:
-    jsonl_file_path = f'step_{step}.jsonl'
+    jsonl_file_path = f'/workspace/generated_output/gsm8k/dot_medium/step_{step}.jsonl'
     correct_rate = calculate_correct_rate(jsonl_file_path)
     acc.append(correct_rate)
 
 print(acc)
 
-# plt.plot(steps, acc, scaley=True)
-# plt.xlabel('Steps')
-# plt.ylabel('Accuracy')
-# plt.xticks(steps)
-# plt.savefig('acc.png')
+plt.plot(steps, acc, scaley=True)
+plt.xlabel('Steps')
+plt.ylabel('Accuracy')
+plt.xticks(steps)
+plt.savefig('12000_small_acc.png')
 
 
