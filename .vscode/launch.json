@@ -19,6 +19,9 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/finetune.py",
+            "env": {
+                "CUDA_LAUNCH_BLOCKING": "1"
+            },
             "console": "integratedTerminal"
         },
         {
@@ -28,10 +31,10 @@
             "program": "${workspaceFolder}/gsm8k_run_sample_cond_mp.py",
             "console": "integratedTerminal",
             "args": [
-                "--model_path", "exp_local/gsm8k/2024.05.17/071425_medium_step_60000_mp",
+                "--model_path", "exp_local/gsm8k/2025.03.01/013931_dot_mp_small_60000",
                 "--dataset", "gsm8k",
                 "--steps", "10",
-                "--batch_size", "1",
+                "--batch_size", "4",
             ]
         }
     ]

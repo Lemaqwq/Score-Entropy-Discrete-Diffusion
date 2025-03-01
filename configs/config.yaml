@@ -4,7 +4,7 @@ defaults:
   - override hydra/launcher: submitit_slurm
 
 ngpus: 4
-tokens: 50258
+tokens: 50257
 
 training:
   block_size: 128
@@ -23,7 +23,7 @@ data:
   train: gsm8k
   valid: gsm8k
   cache_dir: data
-  multipass: False
+  multipass: True
   hidden_thought: False
 
 graph:
