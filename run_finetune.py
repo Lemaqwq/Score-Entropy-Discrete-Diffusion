@@ -96,7 +96,7 @@ def _run(rank, world_size, cfg):
     score_model_config = score_model.config
 
     # load in tokenizer
-    score_model, tokenizer = get_tokenizer(model=score_model, device=device)
+    tokenizer = get_tokenizer()
 
     score_model = DDP(score_model, device_ids=[rank], static_graph=True, find_unused_parameters=True)
     noise = DDP(noise, device_ids=[rank], static_graph=True)

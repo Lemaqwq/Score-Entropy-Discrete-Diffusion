@@ -10,7 +10,6 @@ def extract_patterns(string):
         return ans
     else:
         return None
-    
 
 
 def calculate_correct_rate(jsonl_file):
@@ -24,15 +23,15 @@ def calculate_correct_rate(jsonl_file):
             recover = data['recover']
             source = data['source']
 
-            if '<|endoftext|>[SEP]' in recover:
-                recover = recover.split('<|endoftext|>[SEP]')[1]
+            if '<|endoftext|>||' in recover:
+                recover = recover.split('<|endoftext|>||')[1]
                 if '<|endoftext|>' in recover:
                     recover = recover.strip()
                     ans = extract_patterns(recover)
 
                     if len(ans) != 0:
                         try: 
-                            reference = source.split('<|endoftext|>[SEP]')[1]
+                            reference = source.split('<|endoftext|>||')[1]
                             reference = reference.split('<|endoftext|>')[0]
                             reference = extract_patterns(reference.strip())
                             if reference.isnumeric:
@@ -58,20 +57,21 @@ def calculate_correct_rate(jsonl_file):
 # correct_rate = calculate_correct_rate(jsonl_file_path)
 # print(f"Correct rate: {correct_rate}%")
 
-steps = [4, 8, 16, 32, 64]
-acc = []
+if __name__ == '__main__':
+    steps = [4, 8, 16, 32, 64]
+    acc = []
 
-for step in steps:
-    jsonl_file_path = f'/workspace/generated_output/gsm8k/dot_medium/step_{step}.jsonl'
-    correct_rate = calculate_correct_rate(jsonl_file_path)
-    acc.append(correct_rate)
+    for step in steps:
+        jsonl_file_path = f'/workspace/generated_output/gsm8k/dot_medium/step_{step}.jsonl'
+        correct_rate = calculate_correct_rate(jsonl_file_path)
+        acc.append(correct_rate)
 
-print(acc)
+    print(acc)
 
-# plt.plot(steps, acc, scaley=True)
-# plt.xlabel('Steps')
-# plt.ylabel('Accuracy')
-# plt.xticks(steps)
-# plt.savefig('12000_medium_acc.png')
+    # plt.plot(steps, acc, scaley=True)
+    # plt.xlabel('Steps')
+    # plt.ylabel('Accuracy')
+    # plt.xticks(steps)
+    # plt.savefig('12000_medium_acc.png')
 
 

@@ -29,7 +29,7 @@ def main():
     device = torch.device('cuda')
     model, graph, noise = load_model_local(args.model_path, device)
 
-    model, tokenizer = get_tokenizer(model=model, device=device)
+    tokenizer = get_tokenizer()
 
 
     test_set = finetune_get_dataset(args.dataset, "test", tokenizer=tokenizer, multipass=False, hidden_thought=True)

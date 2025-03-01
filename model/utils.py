@@ -92,7 +92,7 @@ class DigitWrapper(ByteLevelBPETokenizer):
     def decode(self, *args, **kwargs):
         return self.tokenizer.decode(*args, **kwargs)
 
-def get_tokenizer(model, device, digit=False):
+def get_tokenizer(digit=False):
     assert (
         digit == False
     ), "Digit wrapper is currently not supported."
@@ -102,37 +102,6 @@ def get_tokenizer(model, device, digit=False):
     # tokenizer = Tokenizer.from_file(tokenizer_path)
 
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
-
-    # num_added_tokens = tokenizer.add_special_tokens(
-    #     {
-    #         "sep_token": "[SEP]",
-    #         "pad_token": "[PAD]"
-    #     }
-    # )
-    # assert num_added_tokens in [
-    #     0,
-    #     2,
-    # ], "GPTTokenizerFast should only add two special token - the pad_token and sep_token, or no tokens if both tokens present."
-
-    # # Access the embedding weights
-    # current_embeddings = model.vocab_embed.embedding  # Shape: [50258, 768]
-    # current_output_weights = model.output_layer.linear  # Shape: [768, 50258]
-
-    # if len(tokenizer) > current_embeddings.shape[0]:
-    #     # Create new embeddings with the new vocabulary size
-    #     new_embeddings = torch.nn.Parameter(torch.zeros(len(tokenizer), model.vocab_embed.embedding.shape[1]).to(device))
-    #     new_output_weights = torch.nn.Linear(in_features=model.output_layer.linear.in_features, out_features=len(tokenizer), device=device)
-
-    #     # Copy the old embeddings into the new embeddings
-    #     # new_embeddings.data[:current_embeddings.shape[0]] = current_embeddings.data
-    #     # new_output_weights.weight.data[:,:current_output_weights.weight.data.shape[1]] = current_output_weights.weight.data
-
-    #     # Replace the old embeddings with the new embeddings
-    #     model.vocab_embed.embedding = new_embeddings
-    #     model.output_layer.linear = new_output_weights
-
-    #     print("Original embeddings shape:", current_embeddings.shape)
-    #     print("New embeddings shape:", new_embeddings.shape)
     
     # return DigitWrapper(tokenizer) if digit else tokenizer
-    return model, tokenizer
+    return tokenizer

@@ -7,6 +7,7 @@ from load_model import load_model_local
 from transformers import GPT2TokenizerFast
 from torch.utils.data import DataLoader
 from data import finetune_get_dataset
+from model.utils import get_tokenizer
 import sampling
 import data
 import json
@@ -21,79 +22,10 @@ PRINT_PAD_TOKEN = "<|endoftext|>"
 PRINT_SEP_TOKEN = "||"
 
 
-def update_input(first_sample, input_mask, input_ids, block_size=128):
-    seq_len = len(first_sample)
-    len_x = seq_len - input_mask.sum(dim=1)
-
-    indices = (input_ids == SEP_TOKEN_ID).nonzero()
-    if len(indices) > 0:
-        index = indices[-1]
-        # Slice the tensor to remove the repeating elements after the first 0
-        ans = input_ids[index.item()+1:]
-
-    # Remove all paddings
-    mask = (ans != PAD_TOKEN_ID)
-    ans = ans[mask]
-    
-
-    # Remove all paddings
-    mask = (first_sample != PAD_TOKEN_ID)
-    first_sample = first_sample[mask]
-
-    # Remove Sep
-    mask = (first_sample != SEP_TOKEN_ID)
-    first_sample = first_sample[mask]
-
-    # Delete all occurrences of eos
-    mask = (first_sample != EOS_TOKEN_ID)
-    first_sample = first_sample[mask]
-
-    first_sample = torch.cat((first_sample, torch.tensor([EOS_TOKEN_ID, SEP_TOKEN_ID]).to(torch.device('cuda'))))
-
-    updated_input_mask = torch.ones((1, block_size), dtype=torch.int64)
-    updated_input_mask[0, :len(first_sample)] = 0
-
-    first_sample = torch.cat((first_sample, ans))
-
-    
-
-
-    # pad to the same length
-    first_sample = torch.nn.functional.pad(first_sample, (0, block_size - len(first_sample)), 'constant', PAD_TOKEN_ID)
-
-    return first_sample.reshape(1, block_size), updated_input_mask.to(torch.device('cuda'))
-
-
-     # Remove all paddings
-    # Find the first occurrence of 0 in the tensor
-    # indices = (first_sample == 15744).nonzero()
-    # if len(indices) > 0:
-    #     index = indices[0]
-    #     # Slice the tensor to remove the repeating elements after the first 0
-    #     first_sample = first_sample[:index.item()]
-
 def batch_update_input(tensor, input_mask):
     seq_len = tensor.shape[1]
     new_tensor = []
     new_mask = tensor.new_ones(tensor.shape, dtype=bool)
-
-    # indices = (input_ids == SEP_TOKEN_ID).nonzero()
-    # if len(indices) > 0:
-    #     index = indices[-1]
-    #     # Slice the tensor to remove the repeating elements after the first 0
-    #     ans = input_ids[index.item()+1:]
-
-    # Remove all paddings
-    # mask = (input_ids != PAD_TOKEN_ID)
-    # input_ids = input_ids[mask]
-    
-    # Remove all paddings
-    # mask = (tensor != PAD_TOKEN_ID)
-    # tensor = tensor[mask]
-
-    # # Remove Sep
-    # mask = (tensor != SEP_TOKEN_ID)
-    # tensor = tensor[mask]
 
     for i, b in enumerate(tensor.tolist()):
         try:  # remove sep and pad
@@ -115,29 +47,6 @@ def batch_update_input(tensor, input_mask):
     new_tensor = new_tensor.type_as(tensor)
     new_mask = new_mask.type_as(input_mask)
 
-
-    # batch_size = tensor.shape[0]
-    # cleaned_tensors = []
-    
-    # for i in range(batch_size):
-    #     mask = (tensor[i] != PAD_TOKEN_ID) & (tensor[i] != SEP_TOKEN_ID)
-    #     cleaned_tensors.append(tensor[i][mask])
-
-
-    # first_sample = torch.cat((first_sample, torch.tensor([EOS_TOKEN_ID, SEP_TOKEN_ID]).to(torch.device('cuda'))))
-
-    # updated_input_mask = torch.ones((1, block_size), dtype=torch.int64)
-    # updated_input_mask[0, :len(first_sample)] = 0
-
-    # first_sample = torch.cat((first_sample, ans))
-
-    
-
-
-    # pad to the same length
-    # first_sample = torch.nn.functional.pad(first_sample, (0, block_size - len(first_sample)), 'constant', PAD_TOKEN_ID)
-
-    # return first_sample.reshape(1, block_size), updated_input_mask.to(torch.device('cuda'))
     return new_tensor, new_mask
 
 
@@ -170,7 +79,7 @@ def main():
 
     block_size = 128
 
-    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+    tokenizer = get_tokenizer()
 
     test_set = finetune_get_dataset(args.dataset, "test", tokenizer, multipass=False, hidden_thought=False)
 
@@ -188,10 +97,6 @@ def main():
 
     test_iter = iter(test_loader)
 
-    # def proj_fun(x):
-    #     x = torch.where(input_mask==0, input_ids, x)
-    #     return x
-
     device = torch.device('cuda')
     model, graph, noise = load_model_local(args.model_path, device)
 
@@ -204,12 +109,8 @@ def main():
     for batch in test_iter:
         start_time = time.time()
         input_ids = batch["input_ids"].to(device)
-        current_seq = tokenizer.batch_decode(input_ids)
         input_mask = batch["input_mask"].to(device)
         batch_size = len(input_ids)
-
-        
-
 
         cot_steps = 10
         unfinished = input_ids.new_ones(batch_size, dtype=bool)
@@ -231,26 +132,6 @@ def main():
 
 
 
-        
-
-        # end_thought = False
-        # len_of_thought = 0
-        # while not end_thought:
-
-        #     samples = proj_fun(sampling_fn(model))
-        #     text_samples = tokenizer.batch_decode(samples)
-
-        #     first_sample = samples[0]
-        #     first_text_sample = text_samples[0]
-        #     if "####" in first_text_sample or len_of_thought > 10:
-        #         end_thought = True
-        #     else:
-        #         input_ids, input_mask = update_input(first_sample, input_mask, input_ids[0])
-        #         decoded_input_ids_tmp = tokenizer.batch_decode(input_ids)
-        #         # print(decoded_input_ids_tmp)
-        #         len_of_thought += 1
-
-
 
         run_time.append(time.time() - start_time)
         if len(run_time) % 10 == 0:
@@ -261,8 +142,6 @@ def main():
         for i in range(batch_size):
             print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(batch["input_ids"][i])}), file=fout)
 
-        # for i in range(curr_batch_sz):
-        #     print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(input_ids[i])}), file=fout)
 
     print(f"Thoughput (it/sec): {len(run_time) / sum(run_time)}")
         
