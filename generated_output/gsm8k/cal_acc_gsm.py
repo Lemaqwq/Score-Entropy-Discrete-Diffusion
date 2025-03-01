@@ -32,13 +32,11 @@ def calculate_correct_rate(jsonl_file):
 
                     if len(ans) != 0:
                         try: 
-                            reference = source.split('[PAD]')[0]
-                            reference = reference.split('[SEP]')[1]
-                            reference = reference.strip()
-                            reference = extract_patterns(reference)
+                            reference = source.split('<|endoftext|>[SEP]')[1]
+                            reference = reference.split('<|endoftext|>')[0]
+                            reference = extract_patterns(reference.strip())
                             if reference.isnumeric:
                                 if ans == reference:
-                                    print(total_lines)
                                     correct_lines += 1
                                     # print(f"reference: {data['source']}\nrecover: {data['recover']}")
                             else:
@@ -46,8 +44,6 @@ def calculate_correct_rate(jsonl_file):
                         except:
                             print(f"Bad reference detected: reference: {data['source']}\nrecover: {data['recover']}")
                             continue
-                    
-
 
             total_lines += 1
            
@@ -72,10 +68,10 @@ for step in steps:
 
 print(acc)
 
-plt.plot(steps, acc, scaley=True)
-plt.xlabel('Steps')
-plt.ylabel('Accuracy')
-plt.xticks(steps)
-plt.savefig('12000_medium_acc.png')
+# plt.plot(steps, acc, scaley=True)
+# plt.xlabel('Steps')
+# plt.ylabel('Accuracy')
+# plt.xticks(steps)
+# plt.savefig('12000_medium_acc.png')
 
 

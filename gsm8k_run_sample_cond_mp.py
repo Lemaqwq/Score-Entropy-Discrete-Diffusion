@@ -11,36 +11,43 @@ import sampling
 import data
 import json
 
-def update_input(first_sample, input_mask, input_ids):
+EOS_TOEKN_ID = 50256
+PAD_TOEKN_ID = 50256
+SEP_TOEKN_ID = 15886
+PRINT_PAD_TOEKN = "<|endoftext|>"
+PRINT_SEP_TOEKN = "||"
+
+
+def update_input(first_sample, input_mask, input_ids, block_size=128):
     seq_len = len(first_sample)
     len_x = seq_len - input_mask.sum(dim=1)
 
-    indices = (input_ids == 8621).nonzero()
+    indices = (input_ids == SEP_TOEKN_ID).nonzero()
     if len(indices) > 0:
         index = indices[-1]
         # Slice the tensor to remove the repeating elements after the first 0
         ans = input_ids[index.item()+1:]
 
     # Remove all paddings
-    mask = (ans != 15744)
+    mask = (ans != PAD_TOEKN_ID)
     ans = ans[mask]
     
 
     # Remove all paddings
-    mask = (first_sample != 15744)
+    mask = (first_sample != PAD_TOEKN_ID)
     first_sample = first_sample[mask]
 
     # Remove Sep
-    mask = (first_sample != 8621)
+    mask = (first_sample != SEP_TOEKN_ID)
     first_sample = first_sample[mask]
 
     # Delete all occurrences of eos
-    mask = (first_sample != 50256)
+    mask = (first_sample != EOS_TOEKN_ID)
     first_sample = first_sample[mask]
 
-    first_sample = torch.cat((first_sample, torch.tensor([50256, 8621]).to(torch.device('cuda'))))
+    first_sample = torch.cat((first_sample, torch.tensor([EOS_TOEKN_ID, SEP_TOEKN_ID]).to(torch.device('cuda'))))
 
-    updated_input_mask = torch.ones((1, 128), dtype=torch.int64)
+    updated_input_mask = torch.ones((1, block_size), dtype=torch.int64)
     updated_input_mask[0, :len(first_sample)] = 0
 
     first_sample = torch.cat((first_sample, ans))
@@ -49,9 +56,9 @@ def update_input(first_sample, input_mask, input_ids):
 
 
     # pad to the same length
-    first_sample = torch.nn.functional.pad(first_sample, (0, 128 - len(first_sample)), 'constant', 15744)
+    first_sample = torch.nn.functional.pad(first_sample, (0, block_size - len(first_sample)), 'constant', PAD_TOEKN_ID)
 
-    return first_sample.reshape(1, 128), updated_input_mask.to(torch.device('cuda'))
+    return first_sample.reshape(1, block_size), updated_input_mask.to(torch.device('cuda'))
 
 
      # Remove all paddings
@@ -81,9 +88,11 @@ def main():
     parser.add_argument("--suffix", type=str, default="")
     args = parser.parse_args()
 
+    block_size = 128
+
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
 
-    test_set = finetune_get_dataset(args.dataset, "test", multipass=False, hidden_thought=True)
+    test_set = finetune_get_dataset(args.dataset, "test", tokenizer, multipass=False, hidden_thought=False)
 
     test_loader = DataLoader(
         test_set,
@@ -98,8 +107,6 @@ def main():
     # mprint(f"Length of datasets: {len(train_ds)}, {len(eval_ds)}")
 
     test_iter = iter(test_loader)
-
-    
 
     def proj_fun(x):
         x = torch.where(input_mask==0, input_ids, x)
@@ -121,7 +128,7 @@ def main():
         input_mask = batch["input_mask"].to(device)
         curr_batch_sz = len(input_ids)
         sampling_fn = sampling.get_dot_pc_sampler(
-                graph, noise, (curr_batch_sz, 128), 'analytic', args.steps, device=device, proj_fun=proj_fun
+                graph, noise, (curr_batch_sz, block_size), 'analytic', args.steps, device=device, proj_fun=proj_fun
             )
 
         end_thought = False
@@ -149,7 +156,7 @@ def main():
 
 
         fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
-        print(json.dumps({"recover": first_text_sample, "source": tokenizer.decode(input_ids[0])}), file=fout)
+        print(json.dumps({"recover": first_text_sample, "source": tokenizer.decode(batch["input_ids"][0])}), file=fout)
 
         # for i in range(curr_batch_sz):
         #     print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(input_ids[i])}), file=fout)
