@@ -8,6 +8,7 @@ from transformers import GPT2TokenizerFast
 from torch.utils.data import DataLoader
 from data import finetune_get_dataset
 from model.utils import get_tokenizer
+from tqdm import tqdm
 import sampling
 import data
 import json
@@ -70,7 +71,7 @@ def generate_samples(model, graph, noise, args, device, curr_batch_sz, block_siz
 def main():
     parser = argparse.ArgumentParser(description="Generate some samples")
     parser.add_argument("--model_path", default="louaaron/sedd-medium", type=str)
-    parser.add_argument("--dataset", default="wikitext103", type=str)
+    parser.add_argument("--dataset", default="gsm8k", type=str)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--steps", type=int, default=1024)
     parser.add_argument("--prefix", type=str, default="Hi, my name is")
@@ -78,6 +79,9 @@ def main():
     args = parser.parse_args()
 
     block_size = 128
+
+    device = torch.device('cuda')
+    model, graph, noise = load_model_local(args.model_path, device)
 
     tokenizer = get_tokenizer()
 
@@ -97,17 +101,12 @@ def main():
 
     test_iter = iter(test_loader)
 
-    device = torch.device('cuda')
-    model, graph, noise = load_model_local(args.model_path, device)
-
-    output_dir = f"generated_output/{args.dataset}"
+    model_name = args.model_path.split("/")[-1]
+    output_dir = f"generated_output/{args.dataset}/{model_name}/"
     os.makedirs(output_dir, exist_ok=True)
 
-    run_time = []
-
         
-    for batch in test_iter:
-        start_time = time.time()
+    for batch in tqdm(test_iter, desc="Processing batches", unit="batch"):
         input_ids = batch["input_ids"].to(device)
         input_mask = batch["input_mask"].to(device)
         batch_size = len(input_ids)
@@ -132,18 +131,11 @@ def main():
 
 
 
-
-        run_time.append(time.time() - start_time)
-        if len(run_time) % 10 == 0:
-            print(f"Thoughput (it/sec): {len(run_time) / sum(run_time)}")
-
         text_samples = tokenizer.batch_decode(input_ids)
         fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
         for i in range(batch_size):
             print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(batch["input_ids"][i])}), file=fout)
 
-
-    print(f"Thoughput (it/sec): {len(run_time) / sum(run_time)}")
         
     print("### Done!")
 
