@@ -76,6 +76,7 @@ def main():
     parser.add_argument("--steps", type=int, default=1024)
     parser.add_argument("--prefix", type=str, default="Hi, my name is")
     parser.add_argument("--suffix", type=str, default="")
+    parser.add_argument("--cot_steps", type=int, default=10)
     args = parser.parse_args()
 
     block_size = 128
@@ -111,10 +112,9 @@ def main():
         input_mask = batch["input_mask"].to(device)
         batch_size = len(input_ids)
 
-        cot_steps = 10
         unfinished = input_ids.new_ones(batch_size, dtype=bool)
         end = False
-        for _ in range(cot_steps):
+        for _ in range(args.cot_steps):
             curr_batch_sz = unfinished.sum().item()
             samples = generate_samples(model, graph, noise, args, device, curr_batch_sz, block_size, input_ids[unfinished], input_mask[unfinished])
             input_ids[unfinished] = samples
