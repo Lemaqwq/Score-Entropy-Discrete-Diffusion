@@ -1,16 +1,13 @@
-import time
 import os
 import torch
 import argparse
 
 from load_model import load_model_local
-from transformers import GPT2TokenizerFast
 from torch.utils.data import DataLoader
 from data import finetune_get_dataset
 from model.utils import get_tokenizer
 from tqdm import tqdm
 import sampling
-import data
 import json
 
 END_OF_THOUGHT_TOKEN_ID = 4242
