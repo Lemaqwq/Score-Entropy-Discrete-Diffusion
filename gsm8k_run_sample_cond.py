@@ -1,16 +1,13 @@
-import time
 import os
 import torch
 import argparse
 
 from load_model import load_model_local
-from transformers import GPT2TokenizerFast
 from torch.utils.data import DataLoader
 from data import finetune_get_dataset
 from model.utils import get_tokenizer
 from tqdm import tqdm
 import sampling
-import data
 import json
 
 
@@ -57,7 +54,6 @@ def main():
     
     run_time = []
     for batch in tqdm(test_iter, desc="Processing batches", unit="batch"):
-        start_time = time.time()
         input_ids = batch["input_ids"].to(device)
         input_mask = batch["input_mask"].to(device)
         curr_batch_sz = len(input_ids)
@@ -69,16 +65,11 @@ def main():
         samples = proj_fun(sampling_fn(model))
         text_samples = tokenizer.batch_decode(samples)
 
-        run_time.append(time.time() - start_time)
-        if len(run_time) % 10 == 0:
-            print(f"Throughput (it/sec): {len(run_time) / sum(run_time)}")
-
         fout = open(output_dir + f"/step_{args.steps}.jsonl", 'a')
 
         for i in range(curr_batch_sz):
             print(json.dumps({"recover": text_samples[i], "source": tokenizer.decode(input_ids[i])}), file=fout)
 
-    print(f"Thoughput (it/sec): {len(run_time) / sum(run_time)}")
         
     print("### Done!")
 
