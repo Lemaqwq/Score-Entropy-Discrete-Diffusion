@@ -1,12 +1,9 @@
-import re
 from transformers import GPT2TokenizerFast
 from datasets import load_dataset
 from itertools import chain
 import numpy as np
 import torch
 
-import urllib.request
-import zipfile
 import requests
 import json
 import datasets
@@ -17,7 +14,7 @@ from model.utils import get_tokenizer
 from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import DataLoader, DistributedSampler
 
-pad_token_id = 50256
+PAD_TOKEN_ID = 50256
 
 
 def cycle_loader(dataloader, sampler=None):
@@ -72,9 +69,9 @@ def preprocess_gsm8k(data_line, multipass=False, hidden_thought=False):
     
     return cot_sequences
 
-def _collate_batch_helper(examples, pad_token_id, max_length, return_mask=False):
-    result = torch.full([len(examples), max_length], pad_token_id, dtype=torch.int64).tolist()
-    mask_ = torch.full([len(examples), max_length], pad_token_id, dtype=torch.int64).tolist()
+def _collate_batch_helper(examples, PAD_TOKEN_ID, max_length, return_mask=False):
+    result = torch.full([len(examples), max_length], PAD_TOKEN_ID, dtype=torch.int64).tolist()
+    mask_ = torch.full([len(examples), max_length], PAD_TOKEN_ID, dtype=torch.int64).tolist()
     for i, example in enumerate(examples):
         curr_len = min(len(example), max_length)
         result[i][:curr_len] = example[:curr_len]
@@ -149,7 +146,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     
     def pad_function(group_lst):
         max_length = seq_len
-        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], pad_token_id, max_length)
+        group_lst['input_ids'] = _collate_batch_helper(group_lst['input_ids'], PAD_TOKEN_ID, max_length)
         group_lst['input_mask'] = _collate_batch_helper(group_lst['input_mask'], 1, max_length)
         return group_lst
 
