@@ -28,81 +28,6 @@ def cycle_loader(dataloader, sampler=None):
             yield data
 
 
-def wt_detokenizer(string):
-    # contractions
-    string = string.replace("s '", "s'")
-    string = re.sub(r"/' [0-9]/", r"/'[0-9]/", string)
-    # number separators
-    string = string.replace(" @-@ ", "-")
-    string = string.replace(" @,@ ", ",")
-    string = string.replace(" @.@ ", ".")
-    # punctuation
-    string = string.replace(" : ", ": ")
-    string = string.replace(" ; ", "; ")
-    string = string.replace(" . ", ". ")
-    string = string.replace(" ! ", "! ")
-    string = string.replace(" ? ", "? ")
-    string = string.replace(" , ", ", ")
-    # double brackets
-    string = re.sub(r"\(\s*([^\)]*?)\s*\)", r"(\1)", string)
-    string = re.sub(r"\[\s*([^\]]*?)\s*\]", r"[\1]", string)
-    string = re.sub(r"{\s*([^}]*?)\s*}", r"{\1}", string)
-    string = re.sub(r"\"\s*([^\"]*?)\s*\"", r'"\1"', string)
-    string = re.sub(r"'\s*([^']*?)\s*'", r"'\1'", string)
-    # miscellaneous
-    string = string.replace("= = = =", "====")
-    string = string.replace("= = =", "===")
-    string = string.replace("= =", "==")
-    string = string.replace(" " + chr(176) + " ", chr(176))
-    string = string.replace(" \n", "\n")
-    string = string.replace("\n ", "\n")
-    string = string.replace(" N ", " 1 ")
-    string = string.replace(" 's", "'s")
-    return string
-
-def ptb_detokenizer(x):
-    x = x.replace(" 's", "'s")
-    x = x.replace("s ' ", "s' ")
-    x = x.replace(" n't", "n't")
-    x = x.replace(" \n ", "\n")
-    x = x.replace("\\/", "/")
-    for _ in range(10):
-        x = x.replace(" N ", " 1 ")
-    x = x.replace("$ 1", "$1")
-    x = x.replace("# 1", "#1")
-    x = x.replace("<unk>", "?")
-    return x
-
-def lm1b_detokenizer(x):
-    x = x.replace('http : / / ', 'http://')
-    x = x.replace('https : / / ', 'https://')
-    x = re.sub(r' \'(\w+)', r"'\1", x)
-    x = re.sub(r' (\w+) \. ', r' \1. ', x)
-    x = re.sub(r' (\w+) \.$', r' \1.', x)
-    x = x.replace(' ? ', '? ')
-    x = re.sub(r' \?$', '?', x)
-    x = x.replace(' ! ', '! ')
-    x = re.sub(r' \!$', '!', x)
-    x = x.replace(' , ', ', ')
-    x = x.replace(' : ', ': ')
-    x = x.replace(' ; ', '; ')
-    x = x.replace(' / ', '/')
-    x = re.sub(r'\" ([^\"]+) \"', r'"\1"', x)
-    x = re.sub(r'\' ([^\']+) \'', r"'\1'", x)
-    x = re.sub(r'\( ([^\(\)]+) \)', r"(\1)", x)
-    x = re.sub(r'\[ ([^\[\]]+) \]', r"[\1]", x)
-    x = x.replace('$ ', '$')
-    x = x.replace('£ ', '£')
-    return x
-
-
-def lambada_detokenizer(text):
-    text = text.replace("“", '"')
-    text = text.replace("”", '"')
-    return '\n'+text.strip()
-
-
-def get_lambada_test_dataset():
     url = "https://openaipublic.blob.core.windows.net/gpt-2/data/lambada_test.jsonl"
 
     def read_jsonl_to_list(url):
@@ -121,14 +46,6 @@ def get_lambada_test_dataset():
     dataset = Dataset.from_list(lambada_data)
     return dataset
 
-# def preprocess_gsm8k(data_line):
-#     question = json.loads(data_line)['src'].strip()
-#     target = json.loads(data_line)['trg'].strip()
-
-#     rationales = json.loads(data_line)['rationales'].strip()
-#     cot_sequences = [[question, rationales + ' #### ' + target]]
-
-#     return cot_sequences
 
 def preprocess_gsm8k(data_line, multipass=False, hidden_thought=False):
     question = json.loads(data_line)['src'].strip()
@@ -176,8 +93,6 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
     def tokenize_function(examples):
         input_id_x = vocab_dict(examples['src'], return_attention_mask=False)["input_ids"]
         input_id_y = vocab_dict(examples['trg'], return_attention_mask=False)["input_ids"]
-        # input_id_x = vocab_dict.encode_token(examples['src'])
-        # input_id_y = vocab_dict.encode_token(examples['trg'])
         result_dict = {'input_id_x': input_id_x, 'input_id_y': input_id_y}
         return result_dict
 
@@ -205,13 +120,6 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             src = group_lst['input_id_x'][i]
             trg = group_lst['input_id_y'][i]
 
-
-            # len_z = len(src) + len(trg)
-            # stat_path = './stat_train_data' + 'gsm8k' + '.jsonl'
-            # stat = open(stat_path, 'a')
-            # print(json.dumps({"source": src, "target": trg, "len_z": len_z}), file=stat)
-            # stat.close()
-
             while len(src) + len(trg) > seq_len - 2:
                 if len(src)>len(trg):
                     src.pop()
@@ -228,7 +136,7 @@ def helper_tokenize(sentence_lst, vocab_dict, seq_len):
             mask.append([0]*(len(src)+1))
         group_lst['input_ids'] = lst
         group_lst['input_mask'] = mask
-        # print('### decoded_input_ids example', vocab_dict.decode(group_lst['input_ids'][0]))
+
         return group_lst
     
     # Merge the x and y into z and mask the x
@@ -282,13 +190,14 @@ class TextDataset(TorchDataset):
 
 
 
-def finetune_get_dataset(name, mode, tokenizer, multipass, hidden_thought, block_size=128, data_dir="datasets/gsm8k"):
+def finetune_get_dataset(name, mode, tokenizer, multipass, hidden_thought, block_size=128):
     if name != "gsm8k":
         assert False, f"only gsm8k is supported for finetuning, now providing {name}."
+    
+    sentence_lst = {'src':[], 'trg': []}
+    data_dir = f'./data/{name}'
 
     print('#'*30, '\nLoading dataset {} from {}...'.format(name, data_dir))
-
-    sentence_lst = {'src':[], 'trg': []}
 
     if mode == 'train':
         print('### Loading form the TRAIN set...')
@@ -320,106 +229,11 @@ def finetune_get_dataset(name, mode, tokenizer, multipass, hidden_thought, block
                 sentence_lst['trg'].append(cot_sentence[1])
 
     print('### Data samples...\n', sentence_lst['src'][:10], sentence_lst['trg'][:10])
-
-    _Simon = True
-    if _Simon:
-        with open('./raw_train_data' + 'gsm8k' + '.jsonl', 'w') as f:
-            for i in range(len(sentence_lst['src'])):
-                print(json.dumps({"source": sentence_lst['src'][i], "target": sentence_lst['trg'][i]}), file=f)
     
     train_dataset = TextDataset(helper_tokenize(sentence_lst, vocab_dict=tokenizer, seq_len=block_size))
 
     return train_dataset
 
-
-    
-
-
-
-
-
-def get_dataset(name, mode, cache_dir=None, block_size=1024, num_proc=8):
-    if name == "wikitext103":
-        dataset = load_dataset("wikitext", name="wikitext-103-raw-v1", cache_dir=cache_dir)
-    elif name == "wikitext2":
-        dataset = load_dataset("wikitext", name="wikitext-2-raw-v1", cache_dir=cache_dir)
-    elif name == "ptb":
-        dataset = load_dataset("ptb_text_only", cache_dir=cache_dir)
-    elif name == "lambada":
-        dataset = get_lambada_test_dataset()
-    else:
-        dataset = load_dataset(name, cache_dir=cache_dir)
-
-    if name == "lambada":
-        data = dataset
-    else:
-        data = dataset[mode]
-
-    if name.startswith("wikitext"):
-        detokenizer = wt_detokenizer
-    elif name == "ptb":
-        detokenizer = ptb_detokenizer
-    elif name == "lm1b":
-        detokenizer = lm1b_detokenizer
-    elif name == "lambada":
-        detokenizer = lambada_detokenizer
-    else:
-        detokenizer = None
-
-    def _apply_detokenizer(detokenizer):
-        def detok(text):
-            for i, t in enumerate(text, 0):
-                 text[i] = detokenizer(t)
-            return text
-        return detok
-
-    # tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
-    tokenizer = get_tokenizer(digit=True)
-    EOS = tokenizer.encode(tokenizer.eos_token)[0]
-
-    def preprocess_and_tokenize(example):
-        if name == "ptb":
-            text = example['sentence']
-        else:
-            text = example["text"]
-        # print(list(example.keys()))
-        # exit()
-        
-        if detokenizer is not None:
-            text = _apply_detokenizer(detokenizer)(text)
-
-        tokens = tokenizer(text, return_attention_mask=False)
-        # add in EOS token following 
-        # https://github.com/jcpeterson/openwebtext/blob/master/tokenize_text.py#L67
-        for token in tokens['input_ids']:
-            token.append(EOS)
-        return tokens
-    
-    tokenized_dataset = data.map(preprocess_and_tokenize, batched=True, num_proc=num_proc, load_from_cache_file=True)
-    if name == "ptb":
-        tokenized_dataset = tokenized_dataset.remove_columns('sentence')
-    else:
-        tokenized_dataset = tokenized_dataset.remove_columns('text')
-    
-
-    def group_texts(examples):
-        # Concatenate all texts.
-        concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
-        total_length = len(concatenated_examples[list(examples.keys())[0]])
-        # We drop the small remainder, and if the total_length < block_size  we exclude this batch and return an empty dict.
-        # We could add padding if the model supported it instead of this drop, you can customize this part to your needs.
-        total_length = (total_length // block_size) * block_size
-        # Split by chunks of max_len.
-        result = {
-            k: [t[i : i + block_size] for i in range(0, total_length, block_size)]
-            for k, t in concatenated_examples.items()
-        }
-        return result
-
-    chunked_dataset = tokenized_dataset.map(group_texts, batched=True, num_proc=num_proc, load_from_cache_file=True)
-    chunked_dataset = chunked_dataset.with_format('torch')
-
-    return chunked_dataset
 
 
 def get_dataloaders(config, tokenizer, distributed=True):
@@ -428,14 +242,9 @@ def get_dataloaders(config, tokenizer, distributed=True):
     if config.eval.batch_size % (config.ngpus * config.training.accum) != 0:
         raise ValueError(f"Eval Batch Size for {config.eval.batch_size} is not divisible by {config.ngpus} gpus with accumulation {config.training.accum}.")
 
-    _Simon_finetune = True
-    if _Simon_finetune:
-        train_set = finetune_get_dataset(config.data.train, "train", tokenizer, config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
-        valid_set = finetune_get_dataset(config.data.valid, "validation", tokenizer, config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
-
-    else:
-        train_set = get_dataset(config.data.train, "train", cache_dir=config.data.cache_dir, block_size=config.model.length)
-        valid_set = get_dataset(config.data.valid, "validation" if config.data.valid != "text8" else "test", cache_dir=config.data.cache_dir, block_size=config.model.length)
+    # Load datasets locally
+    train_set = finetune_get_dataset(config.data.train, "train", tokenizer, config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
+    valid_set = finetune_get_dataset(config.data.valid, "validation", tokenizer, config.data.multipass, config.data.hidden_thought, block_size=config.training.block_size)
 
     if distributed:
         train_sampler = DistributedSampler(train_set) 
