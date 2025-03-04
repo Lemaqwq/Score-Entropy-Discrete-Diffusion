@@ -159,7 +159,7 @@ bash run_sample_cond_mp.sh
 
 ### Evaluation
 ```bash
-python cal_acc_gsm.py
+bash run_cal_accuracy.sh
 ```
 
 
