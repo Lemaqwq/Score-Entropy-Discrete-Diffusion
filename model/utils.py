@@ -96,10 +96,6 @@ def get_tokenizer(digit=False):
     assert (
         digit == False
     ), "Digit wrapper is currently not supported."
-    
-    # tokenizer_path = os.path.join('misc/owt2_tokenizer.json')
-    # from tokenizers import Tokenizer
-    # tokenizer = Tokenizer.from_file(tokenizer_path)
 
     tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
     

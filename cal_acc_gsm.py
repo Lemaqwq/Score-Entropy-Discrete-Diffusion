@@ -61,8 +61,8 @@ if __name__ == '__main__':
 
     acc = []
     for step in steps:
-        jsonl_file_path = f'{generated_output_path}/step_{step}.jsonl'
-        correct_rate = calculate_correct_rate(jsonl_file_path)
+        result_path = f'{generated_output_path}/step_{step}.jsonl'
+        correct_rate = calculate_correct_rate(result_path)
         acc.append(correct_rate)
 
     for i in range(len(steps)):
