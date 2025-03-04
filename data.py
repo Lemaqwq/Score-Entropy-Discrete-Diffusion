@@ -207,7 +207,7 @@ def finetune_get_dataset(name, mode, tokenizer, multipass, hidden_thought, block
         path = f'{data_dir}/test.jsonl'
 
     # Maximum number of data samples to load. Additional samples will be ignored.
-    MAX_DATA_LEN = 10000000
+    MAX_DATA_LEN = 100
     with open(path, 'r') as f_reader:
         for row in f_reader:
             if name == 'gsm8k':
