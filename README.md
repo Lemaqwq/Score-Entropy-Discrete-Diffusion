@@ -112,7 +112,7 @@ git checkout dot-sedd
 
 
 #### 🐍 Conda
-If you use the above docker image, this step can be skipped, because the conda env has been well prepared in it.
+If you use the above docker image, this step can be skipped, because the conda env has been well prepared in it. Please also refer to the original <a href="https://github.com/louaaron/Score-Entropy-Discrete-Diffusion" target="_blank">SEDD</a> repo for more detailed conda environment setup instruction!
 ```bash
 # Create and activate conda environment
 conda env create -f environment.yml
@@ -144,6 +144,8 @@ Then simply run:
 ```bash
 python finetune.py
 ```
+
+This creates a new directory `direc=exp_local/DATE/TIME` and saves the checkpoint and log.
 
 ### Inference
 Specify the `--model_path` in the script before sampling.
