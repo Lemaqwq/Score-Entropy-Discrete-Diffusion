@@ -2,3 +2,4 @@ __pycache__/*
 data/
 exp_local/
 */__pycache__/*
+datasets/*
