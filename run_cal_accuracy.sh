@@ -1,3 +1,3 @@
 python cal_acc_gsm.py \
-    --generated_output_path generated_output/gsm8k/013931_dot_mp_small_60000 \
+    --generated_output_path <PATH_TO_GENERATED_OUTPUT_DIR> \
     --steps 4 8 16 32 64

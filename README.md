@@ -123,7 +123,7 @@ pip install -r requirements.txt
 ```
 
 ### Dataset Preparation
-Download and extract the dataset:
+Download data from here: [GSM8k-Aug data](https://github.com/da03/implicit_chain_of_thought/tree/main/data) and put them in the ./data folder with names gsm8k.
 
 Parse the dataset:
 ```bash
@@ -158,7 +158,9 @@ bash run_sample_cond_mp.sh
 ```
 
 ### Evaluation
+Specify the `--generated_output_path` in the script.
 ```bash
+# e.g. --generated_output_path generated_output/gsm8k/<ckpt_dir>
 bash run_cal_accuracy.sh
 ```
 
