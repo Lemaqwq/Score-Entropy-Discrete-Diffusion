@@ -82,7 +82,6 @@ def _run(rank, world_size, cfg):
 
     # load model, graph and noise from pretrained model
     score_model, graph, noise = load_model_hf(f"louaaron/sedd-{cfg.model.name}", device)
-    score_model_config = score_model.config
 
     # load in tokenizer
     tokenizer = get_tokenizer()
@@ -139,11 +138,10 @@ def _run(rank, world_size, cfg):
         step = state['step']
 
 
-        if cfg.data.train != "text8":
+        if cfg.data.train == "gsm8k":
             batch = next(train_iter)
         else:
-            assert False, "Text8 dataset is not supported yet."
-            batch = next(train_iter).to(device)
+            assert False, "Only gsm8k is supported."
         loss = train_step_fn(state, batch)
 
         # flag to see if there was movement ie a full batch got computed
@@ -158,10 +156,10 @@ def _run(rank, world_size, cfg):
                 utils.save_checkpoint(checkpoint_meta_dir, state)
 
             if step % cfg.training.eval_freq == 0:
-                if cfg.data.valid != "text8":
+                if cfg.data.valid == "gsm8k":
                     eval_batch = next(eval_iter)
                 else:
-                    assert False, "Text8 dataset is not supported yet."
+                    assert False, "Only gsm8k is supported."
                     eval_batch = next(train_iter).to(device)
                 eval_loss = eval_step_fn(state, eval_batch)
 
