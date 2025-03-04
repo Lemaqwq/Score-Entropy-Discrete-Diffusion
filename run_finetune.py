@@ -1,10 +1,8 @@
 import datetime
 import os
 import os.path
-import gc
 from itertools import chain
 
-import numpy as np
 import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -13,13 +11,9 @@ import torch.nn.functional as F
 import data
 import losses
 import sampling
-import graph_lib
-import noise_lib
 import utils
 from model.utils import get_tokenizer
-from model import SEDD
 from model.ema import ExponentialMovingAverage
-from transformers import GPT2TokenizerFast, GPT2LMHeadModel
 from load_model import load_model_hf
 
 
@@ -85,11 +79,6 @@ def _run(rank, world_size, cfg):
         mprint("WARNING: Using device {}".format(device))
     mprint(f"Found {os.cpu_count()} total number of CPUs.")
 
-    # build token graph
-    # graph = graph_lib.get_graph(cfg, device)
-    
-    # load score model
-    # score_model = SEDD(cfg).to(device)
 
     # load model, graph and noise from pretrained model
     score_model, graph, noise = load_model_hf(f"louaaron/sedd-{cfg.model.name}", device)
@@ -102,15 +91,6 @@ def _run(rank, world_size, cfg):
     noise = DDP(noise, device_ids=[rank], static_graph=True)
     sampling_eps = 1e-5
 
-
-
-    with open("pretrain_model_config.txt", 'w') as f:
-        f.write("Original model config: \n")
-        f.write(str(cfg) + "\n")
-        f.write("Pretrained model config: \n")
-        f.write(str(score_model_config))
-    
-
     num_parameters = sum(p.numel() for p in score_model.parameters())
     mprint(f"Number of parameters in the model: {num_parameters}")
 
@@ -118,11 +98,6 @@ def _run(rank, world_size, cfg):
         score_model.parameters(), decay=cfg.training.ema)
     mprint(score_model)
     mprint(f"EMA: {ema}")
-
-    # build noise
-    # noise = noise_lib.get_noise(cfg).to(device)
-    # noise = DDP(noise, device_ids=[rank], static_graph=True)
-    # sampling_eps = 1e-5
 
 
     # build optimization state
@@ -136,14 +111,6 @@ def _run(rank, world_size, cfg):
     # load in state
     state = utils.restore_checkpoint(checkpoint_meta_dir, state, device)
     initial_step = int(state['step'])
-
-    
-
-
-    # t = tokenizer.get_vocab()
-    # with open("vocab.txt", 'w') as f:
-    #     for k, v in t.items():
-    #         f.write(f"{k}: {v}\n")
 
     
     # Build data iterators
@@ -160,28 +127,12 @@ def _run(rank, world_size, cfg):
     eval_step_fn = losses.get_step_fn(noise, graph, False, optimize_fn, cfg.training.accum)
 
 
-    # prefix_ids = tokenizer(args.prefix).input_ids
-    # input_ids = prefix_ids + suffix_ids
-    # input_locs = list(range(len(prefix_ids))) + list(range(1024-len(suffix_ids), 1024))
-
-    # input_ids = torch.tensor(input_ids, device="cuda")[None].repeat(args.batch_size, 1)
-    # # Create mask function for conditional generation
-    # def mask_fn(x, mask, input_id):
-    #     x = torch.where(mask, input_id, x)
-    #     return x
-
-
     if cfg.training.snapshot_sampling:
         sampling_shape = (cfg.training.batch_size // (cfg.ngpus * cfg.training.accum), cfg.model.length)
         sampling_fn = sampling.get_sampling_fn(cfg, graph, noise, sampling_shape, sampling_eps, device)
 
     num_train_steps = cfg.training.n_iters
     mprint(f"Starting training loop at step {initial_step}.")
-
-    # next_data = next(train_iter)
-    # print(f"Next data: {next_data['input_ids']}")
-    # print(f"Decoded data: {tokenizer.batch_decode(next_data['input_ids'])}")
-    # quit()
 
 
     while state['step'] < num_train_steps + 1:
@@ -227,43 +178,3 @@ def _run(rank, world_size, cfg):
                         checkpoint_dir, f'checkpoint_{save_step}.pth'), state)
                 
                 print(f"Finished!!! Saved checkpoint at step {step}.")
-
-                # Generate and save samples
-                # if cfg.training.snapshot_sampling:
-                #     mprint(f"Generating text at step: {step}")
-
-                #     this_sample_dir = os.path.join(sample_dir, "iter_{}".format(step))
-                #     utils.makedirs(this_sample_dir)
-
-                #     ema.store(score_model.parameters())
-                #     ema.copy_to(score_model.parameters())
-                #     sample = sampling_fn(score_model)
-                #     ema.restore(score_model.parameters())
-
-                #     sentences = tokenizer.batch_decode(sample)
-                    
-                #     file_name = os.path.join(this_sample_dir, f"sample_{rank}.txt")
-                #     with open(file_name, 'w') as file:
-                #         for sentence in sentences:
-                #             file.write(sentence + "\n")
-                #             file.write("============================================================================================\n")
-
-                #     if cfg.eval.perplexity:
-                #         with torch.no_grad():
-                #             eval_model = GPT2LMHeadModel.from_pretrained("gpt2-large").to(device).eval()
-                #             batches = sample.shape[0] // cfg.eval.perplexity_batch_size
-                #             total_perplexity = 0
-                #             for i in range(batches):
-                #                 s = sample[i * cfg.eval.perplexity_batch_size:(i + 1) * cfg.eval.perplexity_batch_size]
-                #                 loss, logits = eval_model(s, labels=s)[:2]
-                #                 logits = logits.transpose(-1, -2)
-                #                 perplexity = F.cross_entropy(logits[..., :-1], s[..., 1:], reduction="none").mean(dim=-1).exp().mean()
-                #                 total_perplexity += perplexity
-                #             total_perplexity /= batches
-                #             dist.all_reduce(total_perplexity)
-                #             total_perplexity /= world_size
-                #             mprint(f"Generative Perplexity at step: {step}. Perplexity: {total_perplexity:.3f}.")
-
-                #             del eval_model, logits, loss
-
-                #     dist.barrier()
