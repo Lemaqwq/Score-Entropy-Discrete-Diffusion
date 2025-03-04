@@ -95,7 +95,7 @@ We recommend to setup the environment with our docker [image](https://hub.docker
 
 ```bash
 # Pull the image for finetuning on LLaMA2 from dockerhub
-docker pull simonlemaqwq/sedd:v1.0
+docker pull simonlemaqwq/sedd:v2.0
 
 # Start the container, remember to replace <PROJECT_DIR> with your own project directory
 docker run \
