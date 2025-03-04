@@ -103,7 +103,7 @@ docker run \
     --gpus all \
     --network=host \
     -v <PROJECT_DIR>:/workspace \
-    -it simonlemaqwq/sedd:v1.0 /bin/bash
+    -it simonlemaqwq/sedd:v2.0 /bin/bash
 
 # Switch to the branch for Diffusion of Thoughts - SEDD
 cd /workspace
@@ -123,7 +123,7 @@ pip install -r requirements.txt
 ```
 
 ### Dataset Preparation
-Download data from here: [GSM8k-Aug data](https://github.com/da03/implicit_chain_of_thought/tree/main/data) and put them in the ./data folder with names gsm8k.
+Download data from here: [GSM8k-Aug data](https://github.com/da03/implicit_chain_of_thought/tree/main/data) and put them in `./data/gsm8k`
 
 Parse the dataset:
 ```bash

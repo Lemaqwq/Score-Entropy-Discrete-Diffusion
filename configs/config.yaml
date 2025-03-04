@@ -12,8 +12,8 @@ training:
   accum: 1
   n_iters: 120000
   snapshot_freq: 60000
-  log_freq: 1000
-  eval_freq: 1000
+  log_freq: 100
+  eval_freq: 100
   snapshot_freq_for_preemption: 10000
   weight: standard
   snapshot_sampling: True
@@ -23,7 +23,7 @@ data:
   train: gsm8k
   valid: gsm8k
   cache_dir: data
-  multipass: True
+  multipass: False
   hidden_thought: False
 
 graph:
