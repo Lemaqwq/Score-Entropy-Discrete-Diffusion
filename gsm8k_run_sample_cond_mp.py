@@ -71,8 +71,6 @@ def main():
     parser.add_argument("--dataset", default="gsm8k", type=str)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--steps", type=int, default=1024)
-    parser.add_argument("--prefix", type=str, default="Hi, my name is")
-    parser.add_argument("--suffix", type=str, default="")
     parser.add_argument("--cot_steps", type=int, default=10)
     args = parser.parse_args()
 

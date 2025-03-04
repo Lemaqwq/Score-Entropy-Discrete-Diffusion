@@ -17,8 +17,6 @@ def main():
     parser.add_argument("--dataset", default="wikitext103", type=str)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--steps", type=int, default=1024)
-    parser.add_argument("--prefix", type=str, default="Hi, my name is")
-    parser.add_argument("--suffix", type=str, default="")
     args = parser.parse_args()
 
     block_size = 128
@@ -28,7 +26,7 @@ def main():
 
     tokenizer = get_tokenizer()
 
-    test_set = finetune_get_dataset(args.dataset, "test", tokenizer=tokenizer, multipass=False, hidden_thought=True)
+    test_set = finetune_get_dataset(args.dataset, "test", tokenizer=tokenizer, multipass=False, hidden_thought=False)
 
     test_loader = DataLoader(
         test_set,
