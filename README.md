@@ -89,7 +89,7 @@ Pretrained checkpoints are under policy checking and we will release them as soo
 
 ## Finetuning from SEDD
 ### Environment Setup
-### 🐳 Docker
+#### 🐳 Docker
 
 We recommend to setup the environment with our docker [image](https://hub.docker.com/r/simonlemaqwq/sedd), which will prepare the whole environment and ease your reproduction with minimal effort.
 
@@ -111,7 +111,7 @@ git checkout dot-sedd
 ```
 
 
-### 🐍 Conda
+#### 🐍 Conda
 If you use the above docker image, this step can be skipped, because the conda env has been well prepared in it.
 ```bash
 # Create and activate conda environment
@@ -120,6 +120,14 @@ conda activate sedd
 
 # Install required dependencies
 pip install -r requirements.txt
+```
+
+### Dataset Preparation
+Download and extract the dataset:
+
+Parse the dataset:
+```bash
+python parse_dataset.py --input_dir data/gsm8k --output_dir data/gsm8k
 ```
 
 
